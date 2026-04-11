@@ -62,12 +62,13 @@ export async function cleanupOldPendingTransactions() {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const { error } = await supabaseAdmin
-    .from("transactions")
-    .delete()
-    .eq("payment_status", "pending")
-    .lt("created_at", thirtyDaysAgo.toISOString());
-
-  if (error) console.error("Cleanup failed:", error);
-  else console.log("Cleaned up old pending transactions");
+  const { prisma } = await import("@/lib/db/prisma");
+  const { TransactionStatus } = await import("@prisma/client");
+  const res = await prisma.transaction.deleteMany({
+    where: {
+      status: TransactionStatus.PENDING,
+      createdAt: { lt: thirtyDaysAgo },
+    },
+  });
+  console.log(`Cleaned up old pending transactions: ${res.count} row(s)`);
 }

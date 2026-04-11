@@ -47,7 +47,7 @@ export async function getTypedSetting<T>(
 ): Promise<T> {
   try {
     const value = await getSetting(key);
-    return value ?? defaultValue;
+    return (value ?? defaultValue) as T;
   } catch (error) {
     console.warn(`Failed to get setting ${key}, using default:`, error);
     return defaultValue;

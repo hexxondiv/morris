@@ -36,8 +36,8 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `lib/supabase.ts` | Supabase | Client DB access | `lib/db`, repositories, or API-backed client hooks | `05` | Not Started |
-| `lib/supabase-admin.ts` | Supabase, Clerk | Server DB access and auth bridge | ORM client plus internal authz helpers | `04`, `05` | Not Started |
+| `lib/supabase.ts` | Supabase | Client DB access | `lib/db`, repositories, or API-backed client hooks | `05`, `09` | In Progress | Client bundle still imported by workstream `06/07`-deferred surfaces (e.g. `project-form.tsx`) until those paths migrate. |
+| `lib/supabase-admin.ts` | Supabase, Clerk | Server DB access and auth bridge | ORM client plus internal authz helpers | `04`, `05`, `09` | In Progress | Read paths in scope for `05` moved to Prisma; `ensureAuthorized`, Clerk bridge, and `saveVote` sync still use the admin client. |
 | `lib/supabase-provider.tsx` | Supabase, Clerk | Client provider for user DB state | Remove or replace with internal state/provider | `03`, `05`, `09` | Not Started |
 | `app/store.ts` | Supabase, Clerk | Client state typing for profile/session | Internal auth/user state model | `03`, `05` | Not Started |
 
@@ -59,7 +59,7 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/users/route.ts` | Clerk | User listing | ORM-backed user listing | `05` | Not Started |
+| `app/api/users/route.ts` | Clerk (was), Prisma | User listing | ORM-backed user listing | `05` | Done | Admin list now reads `users` + `user_roles` via `user-repository`; Clerk remains for role mutations in `lib/actions/users.ts` (`06`). |
 | `app/api/users/[id]/route.ts` | Supabase | User profile read/update | Internal repository and service layer | `05`, `06` | Not Started |
 | `app/api/users/[id]/upload-avatar/route.ts` | Clerk | Avatar upload to Clerk | Internal storage and profile update flow | `07` | Not Started |
 | `app/api/users/[id]/role/route.ts` | Clerk | User role lookup | Internal role repository | `04`, `05` | Not Started |
@@ -71,11 +71,11 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/projects/route.ts` | Supabase | Project listing | ORM repository query | `05` | Not Started |
-| `app/api/projects/[slug]/route.ts` | Clerk, Supabase | Project detail and auth-aware access | Internal auth + repository/service reads and writes | `04`, `05`, `06` | Not Started |
-| `components/components/project-page.tsx` | Supabase | Client-side project data reads | API-backed or repository-backed server flow | `05` | Not Started |
+| `app/api/projects/route.ts` | Supabase | Project listing | ORM repository query | `05` | Done | Uses `project-repository` (`listProjects`). |
+| `app/api/projects/[slug]/route.ts` | Clerk, Supabase | Project detail and auth-aware access | Internal auth + repository/service reads and writes | `04`, `05`, `06` | Done | GET/PUT use Prisma repositories + `getSession` / `requireRole`; timeline mutations remain other routes (`06`). |
+| `components/components/project-page.tsx` | Supabase | Client-side project data reads | API-backed or repository-backed server flow | `05` | Done | Lists via `GET /api/projects` (no Supabase import). |
 | `components/components/project-view.tsx` | Clerk | Auth-aware project view actions | Internal session hook/helpers | `03`, `04` | Not Started |
-| `components/components/project-form.tsx` | Clerk, Supabase | Project create/edit and image flow | Internal auth, repositories, storage adapter | `03`, `05`, `06`, `07` | Not Started |
+| `components/components/project-form.tsx` | Clerk, Supabase | Project create/edit and image flow | Internal auth, repositories, storage adapter | `03`, `05`, `06`, `07` | Blocked | Explicit `06/07` boundary comment: still uses Supabase for reads/writes until transactional services. |
 
 ## Project Timeline APIs and Actions
 
@@ -92,39 +92,40 @@ For each file, it identifies:
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
 | `app/api/pledges/route.ts` | Clerk, Supabase | Pledge reads and writes | Internal auth + repositories + transactional services | `04`, `05`, `06` | Not Started |
-| `app/api/pledges/export/route.ts` | Clerk, Supabase | Pledge export | Internal authz + ORM query/export | `04`, `05` | Not Started |
+| `app/api/pledges/export/route.ts` | Clerk, Supabase | Pledge export | Internal authz + ORM query/export | `04`, `05` | Done | `pledge-repository` + `requireRole`. |
 | `lib/actions/pledge.ts` | Clerk, Supabase | Pledge business logic | Transactional service layer | `04`, `06` | Not Started |
-| `app/api/transactions/route.ts` | Clerk, Supabase | Transaction listing | Internal authz + ORM query | `04`, `05` | Not Started |
-| `app/api/transactions/[id]/route.ts` | Clerk, Supabase | Transaction detail | Internal authz + ORM query | `04`, `05` | Not Started |
+| `app/api/transactions/route.ts` | Clerk, Supabase | Transaction listing | Internal authz + ORM query | `04`, `05` | Done | `transaction-repository` + `requireRole`. |
+| `app/api/transactions/[id]/route.ts` | Clerk, Supabase | Transaction detail | Internal authz + ORM query | `04`, `05` | Deferred | **PATCH only** today; still uses Supabase for status updates until `06` (`transaction-repository` write helpers). |
 | `app/api/transactions/create/route.ts` | Clerk, Supabase | Transaction creation | Internal authz + transactional service | `04`, `06` | Not Started |
-| `app/api/transactions/export/route.ts` | Clerk, Supabase | Transaction export | Internal authz + ORM query/export | `04`, `05` | Not Started |
-| `lib/actions/transaction.ts` | Supabase | Transaction query logic | Internal repository/service layer | `05`, `06` | Not Started |
+| `app/api/transactions/export/route.ts` | Clerk, Supabase | Transaction export | Internal authz + ORM query/export | `04`, `05` | Done | `transaction-repository` export list. |
+| `lib/actions/transaction.ts` | Supabase | Transaction query logic | Internal repository/service layer | `05`, `06` | Done | Server actions call `transaction-repository`. |
 | `app/api/voting/route.ts` | Supabase | Voting data reads/writes | Internal repository and services | `05`, `06` | Not Started |
-| `lib/actions/chart.ts` | Supabase | Financial chart/category reads and writes | Internal repository/service layer | `05`, `06` | Not Started |
-| `app/api/open-ledger-metrics/route.ts` | Supabase RPC | Public metrics endpoint | Service-layer aggregation or SQL view under internal DB ownership | `05` | Not Started |
-| `app/api/marquee-data/route.ts` | Supabase RPC | Marquee data endpoint | Internal query/service implementation | `05` | Not Started |
-| `hooks/use-public-ledger.ts` | Supabase | Client ledger reads and realtime | Internal API polling or owned realtime strategy | `05` | Not Started |
+| `lib/actions/chart.ts` | Supabase | Financial chart/category reads and writes | Internal repository/service layer | `05`, `06` | Done | Maps legacy `charts` reads/writes to `ledger_accounts` via `ledger-account-repository`. |
+| `app/api/open-ledger-metrics/route.ts` | Supabase RPC | Public metrics endpoint | Service-layer aggregation or SQL view under internal DB ownership | `05` | Done | `ledger-metrics-repository` (approximate aggregate; see `05-data-access-repositories-and-read-migration.md` RPC notes). |
+| `app/api/marquee-data/route.ts` | Supabase RPC | Marquee data endpoint | Internal query/service implementation | `05` | Done | Returns `{ items, default_currency }` via `getMarqueePayload()`. |
+| `app/api/public-ledger/route.ts` | N/A (new) | Public ledger JSON for clients | Prisma-backed `public-ledger-repository` | `05` | Done | Added for `hooks/use-public-ledger.ts` (polling). |
+| `hooks/use-public-ledger.ts` | Supabase | Client ledger reads and realtime | Internal API polling or owned realtime strategy | `05` | Done | Fetches `/api/public-ledger`; Supabase realtime removed. |
 
 ## Cases and Supporting Reference Data
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
 | `app/api/cases/create/route.ts` | Clerk, Supabase | Public case creation | Internal auth + transactional service | `03`, `06` | Not Started |
-| `app/api/cases/route.ts` | Clerk, Supabase | Admin case listing | Internal authz + repository query | `04`, `05` | Not Started |
+| `app/api/cases/route.ts` | Clerk, Supabase | Admin case listing | Internal authz + repository query | `04`, `05` | Done | `case-repository` + `requireRole`. |
 | `app/api/cases/upload/route.ts` | Supabase Storage | Case file upload | Internal storage adapter | `07` | Not Started |
-| `lib/actions/cases.ts` | Supabase | Case data and stats | Internal repositories/services | `05`, `06` | Not Started |
-| `app/api/states/route.ts` | Supabase | State lookup | Internal repository query | `05` | Not Started |
-| `app/api/states/[state_id]/lgas/route.ts` | Supabase | LGA lookup | Internal repository query | `05` | Not Started |
+| `lib/actions/cases.ts` | Supabase | Case data and stats | Internal repositories/services | `05`, `06` | Done | Reads and case admin mutations use Prisma (`case-repository` / `prisma`); align with `06` for transactional review flows if needed. |
+| `app/api/states/route.ts` | Supabase | State lookup | Internal repository query | `05` | Done | `state-repository`. |
+| `app/api/states/[state_id]/lgas/route.ts` | Supabase | LGA lookup | Internal repository query | `05` | Done | `state-repository`. |
 
 ## Events, Settings, and Utilities
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
 | `app/api/events/route.ts` | Supabase | Events read/write | Internal repository/service layer | `05`, `06` | Not Started |
-| `lib/actions/settings.ts` | Clerk, Supabase | Settings read/write and validation | Internal authz + repositories + audit services | `04`, `05`, `06` | Not Started |
-| `lib/utils/settings.ts` | Supabase | Settings utility access | Internal repository/service access | `05` | Not Started |
-| `lib/actions/index.ts` | Clerk, Supabase | Mixed helper queries and role lookups | Split into internal auth and data modules | `03`, `04`, `05` | Not Started |
-| `lib/actions/users.ts` | Clerk, Supabase | User operations | Internal repository/service layer | `05`, `06` | Not Started |
+| `lib/actions/settings.ts` | Clerk, Supabase | Settings read/write and validation | Internal authz + repositories + audit services | `04`, `05`, `06` | Done | Prisma `settings` + `getCurrentUser` / `getPrimaryRole` for access checks; audit polish in `06`. |
+| `lib/utils/settings.ts` | Supabase | Settings utility access | Internal repository/service access | `05` | Done | Uses `settings-repository` + cache. |
+| `lib/actions/index.ts` | Clerk, Supabase | Mixed helper queries and role lookups | Split into internal auth and data modules | `03`, `04`, `05` | In Progress | Project reads + `canUserVote` eligibility use Prisma; `saveVote` + `syncRole(s)` still touch Supabase (`06` boundary). |
+| `lib/actions/users.ts` | Clerk, Supabase | User operations | Internal repository/service layer | `05`, `06` | In Progress | `getTotalUserCount` / dev profile use Prisma; Clerk remains for admin mutations. |
 
 ## Uploads and Webhooks
 

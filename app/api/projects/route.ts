@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { listProjects } from "@/lib/repositories/project-repository";
 
-// Query parameters schema - properly handle null values from URLSearchParams
 const querySchema = z.object({
   page: z
     .string()
@@ -79,7 +78,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // Parse and validate query parameters - handle null values properly
     const rawParams = {
       page: searchParams.get("page"),
       limit: searchParams.get("limit"),
@@ -90,68 +88,39 @@ export async function GET(request: NextRequest) {
       sortBy: searchParams.get("sortBy"),
       sortOrder: searchParams.get("sortOrder"),
       paginate: searchParams.get("paginate"),
-      ids: searchParams.get('ids')
     };
 
     const params = querySchema.parse(rawParams);
 
-    // Build base query
-    const selectColumns = params.columns ? params.columns.join(",") : "*";
-    let query = supabaseAdmin
-      .from("projects")
-      .select(selectColumns, { count: "exact" });
-
-    // Apply status filters
-    let statusFilters = params.statuses;
-
-    // Hide draft projects from regular users unless explicitly included
-    if (!params.includeHidden) {
-      statusFilters = statusFilters.filter((status) => status !== "draft");
-    }
-
-    if (statusFilters.length > 0) {
-      query = query.in("status", statusFilters);
-    }
-
-    // Apply search filter
-    if (params.search && params.search.trim().length >= 2) {
-      query = query.or(
-        `title.ilike.%${params.search}%,description.ilike.%${params.search}%`
-      );
-    }
-
-    // Apply sorting
-    query = query.order(params.sortBy ?? "created_at", {
-      ascending: params.sortOrder === "asc",
+    const { rows: data, total: totalCount } = await listProjects({
+      page: params.page,
+      limit: params.limit,
+      statuses: params.statuses,
+      search: params.search,
+      includeHidden: params.includeHidden,
+      paginate: params.paginate,
+      sortBy: (params.sortBy ?? "created_at") as
+        | "created_at"
+        | "updated_at"
+        | "title"
+        | "current_amount",
+      sortOrder: params.sortOrder,
     });
 
-    // Apply pagination if requested
-    if (params.paginate) {
-      const offset = (params.page - 1) * params.limit;
-      query = query.range(offset, offset + params.limit - 1);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error("Supabase error:", error);
-      return NextResponse.json(
-        { error: "Database query failed", details: error.message },
-        { status: 500 }
-      );
-    }
-
-    // Calculate pagination metadata
-    const totalCount = count || 0;
     const totalPages = params.paginate
       ? Math.ceil(totalCount / params.limit)
       : 1;
     const hasNext = params.paginate ? params.page < totalPages : false;
     const hasPrevious = params.paginate ? params.page > 1 : false;
 
-    const response = {
+    let statusFilters = params.statuses;
+    if (!params.includeHidden) {
+      statusFilters = statusFilters.filter((status) => status !== "draft");
+    }
+
+    return NextResponse.json({
       success: true,
-      data: data || [],
+      data,
       pagination: {
         page: params.page,
         limit: params.limit,
@@ -170,9 +139,7 @@ export async function GET(request: NextRequest) {
         count: data?.length || 0,
         timestamp: new Date().toISOString(),
       },
-    };
-
-    return NextResponse.json(response);
+    });
   } catch (error) {
     console.error("API error:", error);
 

@@ -43,7 +43,7 @@ Allowed status values:
 | `02` | Target Schema and Domain Model | `Done` | `01` | None | MySQL Prisma schema, initial migration, RPC mapping, and deterministic super admin bootstrap are committed |
 | `03` | Auth.js and Google Sign-In | `Not Started` | `02` | parts of `05` | Must establish session, identity, and super admin-compatible auth flow |
 | `04` | Authorization, Middleware, and Role System | `Not Started` | `03` | parts of `05` | Should not begin until core auth/session primitives are stable |
-| `05` | Data Access Layer and Read Migration | `Not Started` | `02` | parts of `03`, `04`, `07` | Defines repository and query patterns reused by `06` |
+| `05` | Data Access Layer and Read Migration | `Done` | `02` | parts of `03`, `04`, `07` | Prisma repositories added; primary read routes/actions in map migrated; see `05-data-access-repositories-and-read-migration.md` for RPC gaps and `file-by-file-migration-map.md` for deferred files (`project-form`, `transactions/[id]` PATCH, legacy Supabase client cleanup `09`). |
 | `06` | Write Paths and Transactional Services | `Not Started` | `04`, `05` | parts of `07` | Must use internal transactions and final authz rules |
 | `07` | Storage and File Migration | `Not Started` | `02` | `05`, later `06` | Must coordinate with write flows where file metadata is transactional |
 | `08` | Data Migration and Verification | `Not Started` | `02`, `03`, `05`, `06`, relevant `07` | final stabilization work only | Can prepare earlier, but execution waits for target stability |

@@ -1,23 +1,57 @@
 "use server";
 
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { supabaseClient } from "../supabase";
-import { supabaseAdmin } from "../supabase-admin";
+import type { Project } from "@prisma/client";
+import { prisma } from "@/lib/db/prisma";
+import { TransactionStatus } from "@prisma/client";
 import { Role } from "@/types/database.types";
+import { supabaseAdmin } from "../supabase-admin";
+import {
+  apiStatusesToPrisma,
+  projectStatusToApi,
+} from "@/lib/repositories/mappers";
 
-function getProjectById(id: string) {
-  return supabaseClient.from("projects").select("*").eq("id", id).single();
+function mapProjectRow(p: Project) {
+  return {
+    id: p.id,
+    creator_id: p.creatorId,
+    slug: p.slug,
+    title: p.title,
+    description: p.description,
+    goal_amount: Number(p.goalAmount),
+    current_amount: Number(p.currentAmount),
+    status: projectStatusToApi(p.status),
+    created_at: p.createdAt.toISOString(),
+    updated_at: p.updatedAt.toISOString(),
+  };
 }
 
-function getProjectsByStatus(statuses: string[]) {
-  return supabaseClient.from("projects").select("*").in("status", statuses);
+async function getProjectById(id: string) {
+  const p = await prisma.project.findUnique({ where: { id } });
+  if (!p) return { data: null, error: { message: "Not found" } };
+  return { data: mapProjectRow(p), error: null };
 }
 
-function getAllProjects() {
-  return supabaseClient.from("projects").select("*");
+async function getProjectsByStatus(statuses: string[]) {
+  const mapped = apiStatusesToPrisma(statuses);
+  const rows = await prisma.project.findMany({
+    where: mapped.length ? { status: { in: mapped } } : {},
+  });
+  return {
+    data: rows.map(mapProjectRow),
+    error: null,
+  };
 }
 
-/** Workstream 05/06 boundary: bulk Clerk → Supabase profile sync; legacy migration aid only. */
+async function getAllProjects() {
+  const rows = await prisma.project.findMany();
+  return {
+    data: rows.map(mapProjectRow),
+    error: null,
+  };
+}
+
+/** Workstream 05/06 boundary: bulk Clerk → legacy profile sync; remove after Clerk cutover. */
 async function syncRoles() {
   const clerk = await clerkClient();
   let offset = 0;
@@ -38,16 +72,14 @@ async function syncRoles() {
         .upsert({ id: user.id, role }, { onConflict: "id" });
     }
 
-    offset += limit;
-
-    // Break if we've processed all users
+    offset += response.data.length;
     if (response.data.length < limit) break;
   }
 }
 
 /**
  * Workstream 05/06 boundary: writes legacy Supabase `profiles.role` only.
- * Canonical roles live in Prisma `UserRole`; do not add new callers — migrate consumers to Prisma.
+ * Canonical roles live in Prisma `UserRole`; migrate callers to Prisma (06).
  */
 async function syncRole(user: {
   id: string;
@@ -62,28 +94,27 @@ async function syncRole(user: {
 async function getUserRoleFromSupabase(userId: string | null) {
   if (!userId) return null;
 
-  const { data, error } = await supabaseAdmin
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .single();
-
-  if (error || !data) return "user";
-  return data.role || ("user" as Role);
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { userRoles: { include: { role: { select: { key: true } } } } },
+  });
+  if (!user) return "user";
+  const { getPrimaryRole } = await import("@/lib/auth/roles");
+  return getPrimaryRole(user.userRoles);
 }
 
 async function getUserRoleFromClerk(userId: string | null) {
   if (!userId) return "user";
-  
+
   try {
     const clerk = await clerkClient();
-    
+
     const user = await clerk.users.getUser(userId);
-    
+
     const role = (user.publicMetadata?.role as Role) || "user";
     return role;
   } catch (error) {
-    console.error('Full Clerk error object:', JSON.stringify(error, null, 2));
+    console.error("Full Clerk error object:", JSON.stringify(error, null, 2));
     return "user";
   }
 }
@@ -102,15 +133,15 @@ async function canUserVote(userId: string | null): Promise<CanUserVoteResult> {
   }
 
   try {
-    const { data, error } = await supabaseAdmin
-      .from("transactions")
-      .select("payment_status")
-      .eq("user_id", userId)
-      .eq("payment_status", "completed")
-      .limit(1)
-      .single();
+    const donation = await prisma.transaction.findFirst({
+      where: {
+        userId,
+        status: TransactionStatus.COMPLETED,
+      },
+      select: { id: true },
+    });
 
-    if (error || !data) {
+    if (!donation) {
       return {
         canVote: false,
         message:
@@ -132,6 +163,9 @@ async function canUserVote(userId: string | null): Promise<CanUserVoteResult> {
   }
 }
 
+/**
+ * Workstream 06 boundary: voting mutations still use Supabase until votes are fully migrated.
+ */
 async function saveVote(projectId: string, vote: boolean): Promise<VoteResult> {
   try {
     const { userId } = await auth();
@@ -145,7 +179,6 @@ async function saveVote(projectId: string, vote: boolean): Promise<VoteResult> {
 
     const now = new Date().toISOString();
 
-    // Check if the voting period is open
     const { data: votingPeriod, error: periodError } = await supabaseAdmin
       .from("voting_periods")
       .select("start_date, end_date")
@@ -169,7 +202,6 @@ async function saveVote(projectId: string, vote: boolean): Promise<VoteResult> {
       };
     }
 
-    // Check if the user has already voted
     const { data: existingVote, error: fetchError } = await supabaseAdmin
       .from("votes")
       .select("vote")
@@ -186,10 +218,9 @@ async function saveVote(projectId: string, vote: boolean): Promise<VoteResult> {
       };
     }
 
-    let previousVote: boolean | null = existingVote?.vote ?? null;
+    const previousVote: boolean | null = existingVote?.vote ?? null;
 
     if (existingVote) {
-      // Update existing vote
       const { error: updateError } = await supabaseAdmin
         .from("votes")
         .update({ vote, updated_at: new Date().toISOString() })
@@ -205,7 +236,6 @@ async function saveVote(projectId: string, vote: boolean): Promise<VoteResult> {
         };
       }
     } else {
-      // Insert new vote
       const { error: insertError } = await supabaseAdmin
         .from("votes")
         .insert({ project_id: projectId, user_id: userId, vote });

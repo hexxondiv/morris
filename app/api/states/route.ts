@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { listStates } from "@/lib/repositories/state-repository";
 
 /**
  * GET /api/states
@@ -7,21 +7,9 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
  */
 export async function GET() {
   try {
-    const { data: states, error } = await supabaseAdmin
-      .from("states")
-      .select("id, name")
-      .order("name", { ascending: true });
+    const states = await listStates();
 
-    if (error) {
-      console.error("Error fetching states:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch states", details: error.message },
-        { status: 500 }
-      );
-    }
-
-    // Convert integer IDs to strings for frontend compatibility
-    const statesWithStringIds = states?.map((state) => ({
+    const statesWithStringIds = states.map((state) => ({
       ...state,
       id: String(state.id),
     }));

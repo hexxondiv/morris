@@ -106,3 +106,17 @@ Provide:
 1. The modules added for data access
 2. The endpoints and actions converted
 3. Any unresolved RPC-equivalent logic still pending
+
+---
+
+## Completion notes (RPC and read-model gaps)
+
+The following legacy Supabase RPCs are **not** reproduced 1:1 in Prisma; first-party aggregates or settings-backed values approximate them. Tune after data migration verification (workstream `08`).
+
+| Legacy RPC | Replacement in this workstream | Gap / follow-up |
+| --- | --- | --- |
+| `get_open_ledger_metrics` | `ledger-metrics-repository` aggregates + `settings` keys (`manual_*`, `default_currency`, `metrics_data_source`) | Totals and fund splits can diverge from the old SQL until manual keys are aligned or a dedicated summary table is introduced (see `target-schema-overview.md`). |
+| `get_marquee_data` | `getMarqueePayload()` — prefers JSON setting `marquee_featured_items`, else featured `projects` | Does not replicate every dynamic metric tile the old RPC may have returned; extend shaping if the UI requires more metric rows. |
+| `get_public_ledger` | `public-ledger-repository` + `GET /api/public-ledger` | `running_balance` is computed only over the returned window (not full ledger history). Top-donor date fields are approximate. Realtime updates were replaced with polling in `hooks/use-public-ledger.ts`. |
+| `get_transactions` / `fetch_transaction` | `transaction-repository` Prisma queries | Filter semantics and joined columns follow the new schema (`TransactionKind`, `TransactionStatus`, `ledger_accounts`); validate against migrated data. |
+| `get_pledges` (export path only here) | `pledge-repository` | Full pledge listing route (`app/api/pledges/route.ts`) remains on Supabase until workstream `06`. |

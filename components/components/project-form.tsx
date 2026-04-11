@@ -1,4 +1,9 @@
 // components/forms/project-form.tsx
+/**
+ * Workstream 06/07 boundary: project create/update, timelines, and voting periods still use the
+ * Supabase JS client for reads and writes. Deferred from workstream 05 until transactional services
+ * and storage migration own those paths.
+ */
 "use client";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";

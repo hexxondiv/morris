@@ -1,149 +1,48 @@
 "use server";
 
-import { supabaseAdmin } from "@/lib/supabase-admin";
-import { Case, CaseWithDetails, CaseStatus, CaseNote } from "@/types/case.types";
+import { CaseStatus } from "@prisma/client";
+import { prisma } from "@/lib/db/prisma";
+import {
+  getCaseStatistics as loadCaseStatistics,
+  getCaseWithDetailsById,
+  listCasesPaginated,
+} from "@/lib/repositories/case-repository";
+import type { Case, CaseNote, CaseStatus as CaseStatusApi, CaseWithDetails } from "@/types/case.types";
+
+function toPrismaCaseStatus(s: CaseStatusApi): CaseStatus {
+  return s.toUpperCase() as CaseStatus;
+}
 
 export async function fetchCases(
   page: number,
   limit: number,
   search: string
 ): Promise<{ data: Case[]; total: number }> {
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-
-  let query = supabaseAdmin
-    .from("cases")
-    .select(
-      `
-      id,
-      case_reference_id,
-      full_name,
-      phone,
-      email,
-      state_id,
-      lga_id,
-      town,
-      reporting_for,
-      beneficiary_name,
-      relationship,
-      help_type,
-      description,
-      info_confirmed,
-      contact_consent,
-      updates_consent,
-      user_id,
-      status,
-      created_at,
-      updated_at,
-      states!inner(name),
-      lgas!inner(name)
-    `,
-      { count: "exact" }
-    );
-
-  if (search) {
-    query = query.or(`
-      case_reference_id.ilike.%${search}%,
-      full_name.ilike.%${search}%,
-      phone.ilike.%${search}%,
-      email.ilike.%${search}%,
-      description.ilike.%${search}%,
-      town.ilike.%${search}%
-    `);
-  }
-
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .range(from, to);
-
-  if (error) {
-    console.error("Error fetching cases:", error);
-    return { data: [], total: 0 };
-  }
-
-  const transformedData = (data || []).map((caseItem: any) => ({
-    ...caseItem,
-    state_name: caseItem.states?.name || "Unknown",
-    lga_name: caseItem.lgas?.name || "Unknown",
-  }));
-
-  return {
-    data: transformedData,
-    total: count || 0,
-  };
+  const { data, total } = await listCasesPaginated(page, limit, search);
+  return { data: data as Case[], total };
 }
 
 export async function fetchCaseById(id: string): Promise<CaseWithDetails | null> {
-  try {
-    const { data: caseData, error: caseError } = await supabaseAdmin
-      .from("cases")
-      .select(
-        `
-        *,
-        states!inner(name),
-        lgas!inner(name)
-      `
-      )
-      .eq("id", id)
-      .single();
-
-    if (caseError) {
-      console.error("Error fetching case by ID:", caseError);
-      return null;
-    }
-
-    const { data: files, error: filesError } = await supabaseAdmin
-      .from("case_files")
-      .select("*")
-      .eq("case_id", id)
-      .order("created_at", { ascending: true });
-
-    if (filesError) {
-      console.error("Error fetching case files:", filesError);
-    }
-
-    const { data: notes, error: notesError } = await supabaseAdmin
-      .from("case_notes")
-      .select("*")
-      .eq("case_id", id)
-      .order("created_at", { ascending: false });
-
-    if (notesError) {
-      console.error("Error fetching case notes:", notesError);
-    }
-
-    return {
-      ...caseData,
-      state_name: caseData.states?.name || "Unknown",
-      lga_name: caseData.lgas?.name || "Unknown",
-      files: files || [],
-      notes: notes || [],
-    };
-  } catch (error) {
-    console.error("Unexpected error fetching case:", error);
-    return null;
-  }
+  const row = await getCaseWithDetailsById(id);
+  return row as CaseWithDetails | null;
 }
 
 export async function updateCaseStatus(
   caseId: string,
-  status: CaseStatus
+  status: CaseStatusApi
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabaseAdmin
-      .from("cases")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", caseId);
-
-    if (error) {
-      console.error("Error updating case status:", error);
-      return { success: false, error: error.message };
-    }
-
+    await prisma.case.update({
+      where: { id: caseId },
+      data: { status: toPrismaCaseStatus(status) },
+    });
     return { success: true };
-  } catch (error: any) {
-    console.error("Unexpected error updating case status:", error);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    console.error("Error updating case status:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Update failed",
+    };
   }
 }
 
@@ -151,29 +50,42 @@ export async function addCaseNote(
   caseId: string,
   note: string,
   adminUserId: string,
-  adminName: string
+  _adminName: string
 ): Promise<{ success: boolean; error?: string; note?: CaseNote }> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("case_notes")
-      .insert({
-        case_id: caseId,
+    const created = await prisma.caseNote.create({
+      data: {
+        caseId,
         note,
-        admin_user_id: adminUserId,
-        admin_name: adminName,
-      })
-      .select()
-      .single();
+        authorUserId: adminUserId,
+      },
+    });
+    const author = await prisma.user.findUnique({
+      where: { id: adminUserId },
+      select: { displayName: true, firstName: true, lastName: true },
+    });
+    const admin_name =
+      author?.displayName?.trim() ||
+      [author?.firstName, author?.lastName].filter(Boolean).join(" ").trim() ||
+      "Admin";
 
-    if (error) {
-      console.error("Error adding case note:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, note: data };
-  } catch (error: any) {
-    console.error("Unexpected error adding case note:", error);
-    return { success: false, error: error.message };
+    return {
+      success: true,
+      note: {
+        id: created.id,
+        case_id: created.caseId,
+        note: created.note,
+        admin_user_id: created.authorUserId,
+        admin_name,
+        created_at: created.createdAt.toISOString(),
+      },
+    };
+  } catch (error: unknown) {
+    console.error("Error adding case note:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to add note",
+    };
   }
 }
 
@@ -183,120 +95,53 @@ export async function acceptCase(
   adminName: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Update status to reviewing
-    const { error: updateError } = await supabaseAdmin
-      .from("cases")
-      .update({ status: "reviewing", updated_at: new Date().toISOString() })
-      .eq("id", caseId)
-      .eq("status", "pending"); // Only accept if still pending
-
-    if (updateError) {
-      console.error("Error accepting case:", updateError);
-      return { success: false, error: updateError.message };
+    const res = await prisma.case.updateMany({
+      where: { id: caseId, status: CaseStatus.PENDING },
+      data: { status: CaseStatus.REVIEWING },
+    });
+    if (res.count === 0) {
+      return { success: false, error: "Case not found or not pending" };
     }
-
-    // Add a note about acceptance
-    const { error: noteError } = await supabaseAdmin
-      .from("case_notes")
-      .insert({
-        case_id: caseId,
+    await prisma.caseNote.create({
+      data: {
+        caseId,
         note: "Case accepted and moved to reviewing status.",
-        admin_user_id: adminUserId,
-        admin_name: adminName,
-      });
-
-    if (noteError) {
-      console.error("Error adding acceptance note:", noteError);
-      // Don't fail the whole operation if note fails
-    }
-
+        authorUserId: adminUserId,
+      },
+    });
+    void adminName;
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Unexpected error accepting case:", error);
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Accept failed",
+    };
   }
 }
 
 export async function rejectCase(
   caseId: string,
-  adminUserId: string,
-  adminName: string
+  _adminUserId: string,
+  _adminName: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Delete the case
-    const { error: deleteError } = await supabaseAdmin
-      .from("cases")
-      .delete()
-      .eq("id", caseId)
-      .eq("status", "pending"); // Only delete if still pending
-
-    if (deleteError) {
-      console.error("Error deleting case:", deleteError);
-      return { success: false, error: deleteError.message };
+    const res = await prisma.case.deleteMany({
+      where: { id: caseId, status: CaseStatus.PENDING },
+    });
+    if (res.count === 0) {
+      return { success: false, error: "Case not found or not pending" };
     }
-
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Unexpected error rejecting case:", error);
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Reject failed",
+    };
   }
 }
 
-export async function getCaseStatistics(): Promise<{
-  total: number;
-  pending: number;
-  reviewing: number;
-  approved: number;
-  rejected: number;
-  completed: number;
-}> {
-  try {
-    const { count: total } = await supabaseAdmin
-      .from("cases")
-      .select("*", { count: "exact", head: true });
-
-    const { count: pending } = await supabaseAdmin
-      .from("cases")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
-
-    const { count: reviewing } = await supabaseAdmin
-      .from("cases")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "reviewing");
-
-    const { count: approved } = await supabaseAdmin
-      .from("cases")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "approved");
-
-    const { count: rejected } = await supabaseAdmin
-      .from("cases")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "rejected");
-
-    const { count: completed } = await supabaseAdmin
-      .from("cases")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "completed");
-
-    return {
-      total: total || 0,
-      pending: pending || 0,
-      reviewing: reviewing || 0,
-      approved: approved || 0,
-      rejected: rejected || 0,
-      completed: completed || 0,
-    };
-  } catch (error) {
-    console.error("Error fetching case statistics:", error);
-    return {
-      total: 0,
-      pending: 0,
-      reviewing: 0,
-      approved: 0,
-      rejected: 0,
-      completed: 0,
-    };
-  }
+export async function getCaseStatistics() {
+  return loadCaseStatistics();
 }

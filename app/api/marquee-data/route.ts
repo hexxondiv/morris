@@ -1,17 +1,19 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { NextResponse } from "next/server";
+import { getMarqueePayload } from "@/lib/repositories/ledger-metrics-repository";
 
 export async function GET() {
   try {
-    const { data, error } = await supabaseAdmin.rpc('get_marquee_data');
-    
-    if (error) {
-      console.error('RPC Error:', error);
-      return Response.json({ error: 'Failed to fetch marquee data' }, { status: 500 });
-    }
-    
-    return Response.json(data || []);
+    const data = await getMarqueePayload();
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "public, max-age=300, stale-while-revalidate=600",
+      },
+    });
   } catch (err) {
-    console.error('API Error:', err);
-    return Response.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Marquee API:", err);
+    return NextResponse.json(
+      { error: "Failed to fetch marquee data" },
+      { status: 500 }
+    );
   }
 }

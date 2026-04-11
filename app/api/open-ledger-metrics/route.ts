@@ -1,7 +1,6 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
 import { formatCurrency, omit } from "@/lib/utils";
-import { RecentProjectSummary } from "@/types/project";
 import { NextRequest, NextResponse } from "next/server";
+import { getOpenLedgerMetricsPayload } from "@/lib/repositories/ledger-metrics-repository";
 
 interface OpenLedgerMetricsRaw {
   active_villagers: number;
@@ -14,7 +13,7 @@ interface OpenLedgerMetricsRaw {
   one_time_total: number;
   recurring_total: number;
   total_contributions: number;
-  recent_projects: RecentProjectSummary[];
+  recent_projects: unknown[];
   data_source: string;
   last_updated: string;
   currency: string;
@@ -25,8 +24,9 @@ interface OpenLedgerMetricsRaw {
   notes?: string;
 }
 
-// Validation function
-function validateMetricsData(data: any): data is OpenLedgerMetricsRaw {
+function validateMetricsData(data: unknown): data is OpenLedgerMetricsRaw {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
   const requiredFields = [
     "active_villagers",
     "monthly_contributions",
@@ -41,71 +41,42 @@ function validateMetricsData(data: any): data is OpenLedgerMetricsRaw {
   ];
 
   const hasValidNumbers = requiredFields.every(
-    (field) => typeof data[field] === "number" && !isNaN(data[field])
+    (field) => typeof d[field] === "number" && !isNaN(d[field] as number)
   );
 
-  const hasValidDataSource = typeof data.data_source === "string";
+  const hasValidDataSource = typeof d.data_source === "string";
 
   const hasValidProjects =
-    Array.isArray(data.recent_projects) &&
-    data.recent_projects.every(
-      (project: any) =>
-        typeof project.title === "string" &&
-        typeof project.slug === "string" &&
-        typeof project.status === "string"
+    Array.isArray(d.recent_projects) &&
+    (d.recent_projects as unknown[]).every(
+      (project: unknown) =>
+        project &&
+        typeof project === "object" &&
+        typeof (project as { title?: string }).title === "string" &&
+        typeof (project as { slug?: string }).slug === "string" &&
+        typeof (project as { status?: string }).status === "string"
     );
 
   return hasValidNumbers && hasValidDataSource && hasValidProjects;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    // Call the Supabase function
-    const { data, error } = await supabaseAdmin.rpc("get_open_ledger_metrics");
+    const data = await getOpenLedgerMetricsPayload();
 
-    if (error) {
-      console.error("Supabase RPC error:", error);
-      return NextResponse.json(
-        {
-          error: true,
-          success: false,
-          message: "Database connection failed",
-          details:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        },
-        { status: 500 }
-      );
-    }
-
-    // Check if the function returned an error
-    if (data?.error || !data?.success) {
-      console.error("Function returned error:", data?.message);
-      return NextResponse.json(
-        {
-          error: true,
-          success: false,
-          message: data?.message || "Function execution failed",
-        },
-        { status: 500 }
-      );
-    }
-
-    // Validate the data structure
     if (!validateMetricsData(data)) {
-      console.error("Invalid data structure received:", data);
+      console.error("Invalid metrics aggregate shape:", data);
       return NextResponse.json(
         {
           error: true,
           success: false,
-          message: "Invalid data format received from database",
+          message: "Invalid data format from metrics service",
         },
         { status: 500 }
       );
     }
 
     const metrics = data as OpenLedgerMetricsRaw;
-
-    // Use the currency from the database response
     const currency = metrics.currency || "NGN";
     const cleaned = omit(metrics, ["data-source", "notes"]);
 
@@ -133,7 +104,6 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // Cache headers for 15 minutes with stale-while-revalidate
     return NextResponse.json(response, {
       headers: {
         "Cache-Control": "public, max-age=900, stale-while-revalidate=1800",

@@ -3,7 +3,6 @@
 import { auth, clerkClient, createClerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { getUserRoleFromClerk, syncRole } from "@/lib/actions";
-import { supabaseAdmin } from "../supabase-admin";
 import { User as ClerkUser } from "@clerk/nextjs/server";
 import { getSession } from "@/lib/auth/server";
 import { prisma } from "@/lib/db/prisma";
@@ -147,39 +146,40 @@ export async function getUsers(page: number = 1, limit: number = 10) {
 }
 
 export async function getTotalUserCount(query: string) {
-  const clerk = await clerkClient();
-  
-  // Make a single request with limit 1 to get totalCount
-  const response = await clerk.users.getUserList({
-    limit: 1,
-    offset: 0,
-    query: query || undefined,
-  });
-
-  // Return the totalCount from the API response
-  return response.totalCount;
+  const { countUsersForAdmin } = await import("@/lib/repositories/user-repository");
+  return countUsersForAdmin(query);
 }
 
 
 export async function insertDevProfile(userId: string) {
-  // Only run in development
-  if (process.env.NODE_ENV !== 'development') {
-    throw new Error('insertDevProfile can only be used in development');
+  if (process.env.NODE_ENV !== "development") {
+    throw new Error("insertDevProfile can only be used in development");
   }
 
-  const fakeProfile = {
-    id: userId,
-    email: `${userId}@example.com`,
-    first_name: 'Dev',
-    last_name: 'User',
-  };
+  const email = `${userId}@example.com`;
+  await prisma.user.upsert({
+    where: { id: userId },
+    create: {
+      id: userId,
+      email,
+      firstName: "Dev",
+      lastName: "User",
+      displayName: "Dev User",
+    },
+    update: {
+      email,
+      firstName: "Dev",
+      lastName: "User",
+      displayName: "Dev User",
+    },
+  });
+  await prisma.profile.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+  });
 
-  const { error } = await supabaseAdmin
-    .from('profiles')
-    .upsert(fakeProfile);
-
-  if (error) throw error;
-  return fakeProfile;
+  return { id: userId, email, first_name: "Dev", last_name: "User" };
 }
 
 

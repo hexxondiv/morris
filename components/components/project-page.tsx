@@ -7,7 +7,6 @@ import { Loader2, Search, Filter, Grid, List, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { debounce } from "lodash";
 import LogoLoader from "./logo-loader";
-import { supabase } from "@/lib/supabase";
 
 interface ProjectsPageProps {
   initialStatuses?: string[];
@@ -107,47 +106,36 @@ export default function ProjectsPage({
     setError(null);
 
     try {
-      const from = (pageNumber - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      // Build query with status filters (include draft for admin, exclude for regular users)
       let statusFilters = [...selectedStatuses];
       if (isAdminView && !statusFilters.includes("draft")) {
         // In admin view, we might want to include draft in the query if it's selected
       } else if (!isAdminView) {
-        // In regular view, always exclude draft from server query
         statusFilters = statusFilters.filter((status) => status !== "draft");
       }
-      if (!supabase) return;
-      let query = supabase
-        .from("projects")
-        .select("*", { count: "exact" })
-        .in("status", statusFilters)
-        .order("created_at", { ascending: false });
 
-      if (searchTerm && searchTerm.trim() !== "" && searchTerm.length >= 2) {
-        query = query.or(
-          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`
-        );
+      const params = new URLSearchParams({
+        page: String(pageNumber),
+        limit: String(pageSize),
+        statuses: statusFilters.join(","),
+        paginate: "true",
+        sortBy: "created_at",
+        sortOrder: "desc",
+      });
+      if (searchTerm && searchTerm.trim().length >= 2) {
+        params.set("search", searchTerm.trim());
+      }
+      if (isAdminView) {
+        params.set("includeHidden", "true");
       }
 
-      const { data, error, count } = await query.range(from, to);
-
-      if (error) {
-        if (error.code === "PGRST103") {
-          // Range not satisfiable - we've reached the end
-          console.log("Reached end of results, no more data to load");
-          setTotalCount(count || projects.length); // Use current projects length if count is not available
-          // Don't clear projects on append, just stop loading
-          if (!append) {
-            setProjects([]);
-            setDisplayedProjects([]);
-            setTotalCount(0);
-          }
-          return; // Don't throw this as an error since it's expected
-        }
-        throw error;
+      const res = await fetch(`/api/projects?${params.toString()}`);
+      if (!res.ok) {
+        throw new Error(`Failed to load projects (${res.status})`);
       }
+
+      const json = await res.json();
+      const data = json.data as unknown[];
+      const count = json.pagination?.total as number | undefined;
 
       const validatedProjects = (data || [])
         .map((project) => projectSchema.safeParse(project))
