@@ -293,6 +293,8 @@ export type ProjectApiPatchInput = {
   country?: string | null;
   sector?: string | null;
   body_html?: string | null;
+  /** Public cover URL from `/api/upload-image` (maps to `coverImageUrl`). */
+  cover_image?: string | null;
   current_amount?: number;
   slug?: string;
   creator_id?: string;
@@ -323,6 +325,8 @@ export async function updateProjectBySlugOrId(
   if (data.country !== undefined) prismaData.country = data.country;
   if (data.sector !== undefined) prismaData.sector = data.sector;
   if (data.body_html !== undefined) prismaData.bodyHtml = data.body_html;
+  if (data.cover_image !== undefined)
+    prismaData.coverImageUrl = data.cover_image;
   if (data.slug !== undefined) prismaData.slug = data.slug;
   if (data.creator_id !== undefined) prismaData.creatorId = data.creator_id;
 
@@ -331,4 +335,94 @@ export async function updateProjectBySlugOrId(
     data: prismaData,
   });
   return mapProjectDetailRow({ ...updated, votingPeriod: null });
+}
+
+export async function isProjectSlugTaken(
+  slug: string,
+  excludeProjectId?: string
+): Promise<boolean> {
+  const existing = await prisma.project.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  if (!existing) return false;
+  if (excludeProjectId && existing.id === excludeProjectId) return false;
+  return true;
+}
+
+export type CreateProjectInput = {
+  creatorId: string;
+  slug: string;
+  title: string;
+  description: string;
+  goalAmount: number;
+  currentAmount: number;
+  status: string;
+  state: string | null;
+  country: string | null;
+  sector: string | null;
+  bodyHtml: string | null;
+  coverImageUrl: string | null;
+};
+
+export async function createProjectRecord(input: CreateProjectInput) {
+  const mapped = apiStatusesToPrisma([input.status]);
+  const status = mapped[0];
+  if (!status) {
+    throw new Error(`Invalid project status: ${input.status}`);
+  }
+
+  return prisma.project.create({
+    data: {
+      creatorId: input.creatorId,
+      slug: input.slug,
+      title: input.title,
+      description: input.description,
+      bodyHtml: input.bodyHtml,
+      goalAmount: input.goalAmount,
+      currentAmount: input.currentAmount,
+      currency: "NGN",
+      status,
+      sector: input.sector,
+      country: input.country,
+      state: input.state,
+      coverImageUrl: input.coverImageUrl,
+    },
+  });
+}
+
+/**
+ * Keeps `voting_periods` aligned with project status and optional window dates.
+ */
+export async function syncProjectVotingPeriodByStatus(params: {
+  projectId: string;
+  apiStatus: string;
+  startDateIso?: string | null;
+  endDateIso?: string | null;
+}) {
+  const { projectId, apiStatus, startDateIso, endDateIso } = params;
+
+  if (apiStatus === "voting" && startDateIso && endDateIso) {
+    const startAt = new Date(startDateIso);
+    const endAt = new Date(endDateIso);
+    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+      throw new Error("Invalid voting period dates");
+    }
+
+    await prisma.votingPeriod.upsert({
+      where: { projectId },
+      create: {
+        projectId,
+        startAt,
+        endAt,
+      },
+      update: {
+        startAt,
+        endAt,
+      },
+    });
+    return;
+  }
+
+  await prisma.votingPeriod.deleteMany({ where: { projectId } });
 }

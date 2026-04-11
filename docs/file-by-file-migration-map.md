@@ -25,140 +25,141 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/layout.tsx` | Clerk | Root auth provider wiring | Auth.js session provider or first-party auth wrapper | `03` | Not Started |
-| `middleware.ts` | Clerk | Route protection | First-party session-aware middleware | `04` | Not Started |
-| `lib/clerk.ts` | Clerk | Auth and role helpers | `lib/auth/*` and `lib/permissions/*` | `03`, `04` | Not Started |
-| `lib/auth-client.tsx` | Clerk | Client auth support | First-party session client utilities | `03` | Not Started |
-| `app/(public)/sign-in/[[...sign-in]]/page.tsx` | Clerk | Sign-in UI | Custom sign-in page with Google sign-in | `03` | Not Started |
-| `app/(public)/sign-up/[[...sign-up]]/page.tsx` | Clerk | Sign-up UI | Redirect or merged sign-in flow via Google | `03` | Not Started |
-| `hooks/use-role.tsx` | Clerk | Client role lookup | Internal session and role hook | `04` | Not Started |
+| `app/layout.tsx` | Clerk (was) | Root auth provider wiring | `AuthSessionProvider` + `getServerSession` / `authOptions` | `03` | `Done` |
+| `middleware.ts` | Clerk (was) | Route protection | Auth.js session cookie gate + public method/path rules | `04` | `Done` |
+| `lib/clerk.ts` | Clerk (was) | Auth shim | Removed; use `@/lib/auth/server` | `03`, `09` | `Remove` |
+| `lib/auth-client.tsx` | Clerk (was) | Client auth support | `next-auth/react` + session helpers | `03` | `Done` |
+| `app/(public)/sign-in/[[...sign-in]]/page.tsx` | Clerk (was) | Sign-in UI | Google sign-in via Auth.js | `03` | `Done` |
+| `app/(public)/sign-up/[[...sign-up]]/page.tsx` | Clerk (was) | Sign-up UI | Redirect to sign-in / Google | `03` | `Done` |
+| `hooks/use-role.tsx` | Clerk (was) | Client role lookup | `useSession` + `useCurrentRole` | `04` | `Done` |
 
 ## Core Database and Service Layer
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `lib/supabase.ts` | Supabase | Client DB access | `lib/db`, repositories, or API-backed client hooks | `05`, `09` | In Progress | Client bundle still imported by workstream `06/07`-deferred surfaces (e.g. `project-form.tsx`) until those paths migrate. |
-| `lib/supabase-admin.ts` | Supabase, Clerk | Server DB access and auth bridge | ORM client plus internal authz helpers | `04`, `05`, `09` | In Progress | `ensureAuthorized` / Clerk bridge + `syncRole(s)` legacy profile writes remain; voting and core domain writes no longer use this client for migrated flows. |
-| `lib/supabase-provider.tsx` | Supabase, Clerk | Client provider for user DB state | Remove or replace with internal state/provider | `03`, `05`, `09` | Not Started |
-| `app/store.ts` | Supabase, Clerk | Client state typing for profile/session | Internal auth/user state model | `03`, `05` | Not Started |
+| `lib/supabase.ts` | Supabase (was) | Client DB access | Removed; Prisma + HTTP APIs | `05`, `09` | `Remove` |
+| `lib/supabase-admin.ts` | Supabase, Clerk (was) | Server DB bridge | Removed; `@/lib/auth/server` + Prisma | `04`, `05`, `09` | `Remove` |
+| `lib/supabase-provider.tsx` | Supabase, Clerk (was) | Client provider | Removed | `03`, `05`, `09` | `Remove` |
+| `app/store.ts` | Supabase types (was) | Client profile persistence | Zustand `UserProfile` only (no vendor types) | `03`, `05`, `09` | `Done` |
 
 ## Auth-Dependent UI and Dashboard Surfaces
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/(dashboard)/layout.tsx` | Clerk, Supabase | Protected dashboard shell | Internal auth wrapper and internal data access | `03`, `04`, `05` | Not Started |
-| `app/(dashboard)/admin/layout.tsx` | Clerk | Admin shell auth awareness | Internal session and role handling | `04` | Not Started |
-| `app/(dashboard)/dashboard/page.tsx` | Clerk | Dashboard user flow | Internal session helpers | `03` | Not Started |
-| `app/(dashboard)/dashboard/account/page.tsx` | Clerk | Account/profile page | Internal user profile model | `03`, `06` | Not Started |
-| `app/(dashboard)/dashboard/events/page.tsx` | Clerk | Dashboard events/user state | Internal session model | `03`, `05` | Not Started |
-| `app/(dashboard)/dashboard/voting/page.tsx` | Clerk, Supabase | Voting dashboard reads | `requireAuth` + `voting-service` (Prisma) | `04`, `05`, `06` | `Done` | Reads voting projects via `listVotingDashboardProjects`; auth from `@/lib/auth/server`. |
-| `app/(dashboard)/admin/users/page.tsx` | Clerk | Admin user management | Internal users repository and admin UI | `05`, `06` | Not Started |
-| `app/(dashboard)/admin/cases/case-actions.tsx` | Clerk | User-aware admin case actions | Internal session and role model | `04`, `06` | Not Started |
-| `app/(public)/pledge/page.tsx` | Clerk | Auth-aware public pledge flow | Internal auth/session handling | `03`, `06` | Not Started |
+| `app/(dashboard)/layout.tsx` | Clerk, Supabase (was) | Protected dashboard shell | Auth.js session + internal data | `03`, `04`, `05` | `Done` |
+| `app/(dashboard)/admin/layout.tsx` | Clerk (was) | Admin shell auth awareness | Session + roles | `04` | `Done` |
+| `app/(dashboard)/dashboard/page.tsx` | Clerk (was) | Dashboard user flow | Session helpers | `03` | `Done` |
+| `app/(dashboard)/dashboard/account/page.tsx` | Clerk (was) | Account/profile page | Prisma-backed profile | `03`, `06` | `Done` |
+| `app/(dashboard)/dashboard/events/page.tsx` | Clerk (was) | Dashboard events/user state | Session + APIs | `03`, `05` | `Done` |
+| `app/(dashboard)/dashboard/voting/page.tsx` | Clerk, Supabase (was) | Voting dashboard reads | `requireAuth` + `voting-service` (Prisma) | `04`, `05`, `06` | `Done` |
+| `app/(dashboard)/admin/users/page.tsx` | Clerk (was) | Admin user management | Prisma + admin UI | `05`, `06` | `Done` |
+| `app/(dashboard)/admin/cases/case-actions.tsx` | Clerk (was) | User-aware admin case actions | `useSession` + server actions | `04`, `06` | `Done` |
+| `app/(public)/pledge/page.tsx` | Clerk (was) | Auth-aware public pledge flow | Session + APIs | `03`, `06` | `Done` |
 
 ## User and Role APIs
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/users/route.ts` | Clerk (was), Prisma | User listing | ORM-backed user listing | `05` | Done | Admin list now reads `users` + `user_roles` via `user-repository`; Clerk remains for role mutations in `lib/actions/users.ts` (`06`). |
-| `app/api/users/[id]/route.ts` | Supabase | User profile read/update | Internal repository and service layer | `05`, `06` | Not Started |
-| `app/api/users/[id]/upload-avatar/route.ts` | Clerk (was) | Avatar upload | `requireAuth` + `lib/storage` + `users.avatar_url` (Prisma) | `07` | `Done` |
-| `app/api/users/[id]/role/route.ts` | Clerk | User role lookup | Internal role repository | `04`, `05` | Not Started |
-| `app/api/assign-role/route.ts` | Clerk | Role assignment via Clerk metadata | Internal role assignment service | `04`, `06` | Not Started |
-| `app/api/dashboard/user/route.ts` | Clerk, Supabase | Current user DB sync | Internal session + internal user repository | `03`, `05`, `06` | Not Started |
-| `app/api/webhooks/user/route.ts` | Clerk, Supabase | Clerk user sync webhook | Remove after internal auth is live | `03`, `09` | Remove |
+| `app/api/users/route.ts` | Prisma | User listing | `user-repository` | `05` | `Done` |
+| `app/api/users/[id]/route.ts` | Supabase (was) | User profile read/update | Prisma `User` / profile fields | `05`, `06` | `Done` |
+| `app/api/users/[id]/upload-avatar/route.ts` | Clerk (was) | Avatar upload | `requireAuth` + `lib/storage` + Prisma | `07` | `Done` |
+| `app/api/users/[id]/role/route.ts` | Clerk (was) | User role lookup | Prisma `UserRole` | `04`, `05` | `Done` |
+| `app/api/assign-role/route.ts` | Clerk (was) | Role assignment | Prisma `UserRole` + `requireRole` | `04`, `06` | `Done` |
+| `app/api/dashboard/user/route.ts` | Clerk, Supabase (was) | Current user DB sync | `requireAuth` + Prisma aggregations | `03`, `05`, `06` | `Done` |
+| `app/api/webhooks/user/route.ts` | Clerk (was) | Clerk user sync webhook | Removed | `03`, `09` | `Remove` |
 
 ## Projects and Public Project Views
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/projects/route.ts` | Supabase | Project listing | ORM repository query | `05` | Done | Uses `project-repository` (`listProjects`). |
-| `app/api/projects/[slug]/route.ts` | Clerk, Supabase | Project detail and auth-aware access | Internal auth + repository/service reads and writes | `04`, `05`, `06` | Done | GET/PUT use Prisma repositories + `getSession` / `requireRole`; timeline mutations remain other routes (`06`). |
-| `components/components/project-page.tsx` | Supabase | Client-side project data reads | API-backed or repository-backed server flow | `05` | Done | Lists via `GET /api/projects` (no Supabase import). |
-| `components/components/project-view.tsx` | Clerk | Auth-aware project view actions | Internal session hook/helpers | `03`, `04` | Not Started |
-| `components/components/project-form.tsx` | Clerk, Supabase | Project create/edit and image flow | Internal auth, repositories, storage adapter | `03`, `05`, `06`, `07` | Blocked | Cover image upload uses `/api/upload-image` + first-party storage (`07` done for storage); Supabase remains for project CRUD until `06` follow-up. |
+| `app/api/projects/route.ts` | Supabase (was) | Project listing / create | `listProjects` + `POST` create + voting sync (`09`) | `05`, `06`, `09` | `Done` |
+| `app/api/projects/[slug]/route.ts` | Clerk, Supabase (was) | Project detail and writes | Prisma + `requireRole` + voting sync on `PUT` (`09`) | `04`, `05`, `06`, `09` | `Done` |
+| `components/components/project-page.tsx` | Supabase (was) | Client-side project data reads | `GET /api/projects` | `05` | `Done` |
+| `components/components/project-view.tsx` | Clerk (was) | Auth-aware project view actions | `useCurrentRole` / session | `03`, `04` | `Done` |
+| `components/components/project-form.tsx` | Clerk, Supabase (was) | Project create/edit and image flow | `useSession` + `POST/PUT /api/projects` + upload API | `03`, `05`, `06`, `07`, `09` | `Done` |
 
 ## Project Timeline APIs and Actions
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/projects/[slug]/timeline/route.ts` | Clerk, Supabase | Timeline CRUD | `requireRole` + `timeline-service` | `04`, `05`, `06` | `Done` | GET/POST/PUT thin handlers; writes use Prisma `$transaction` where multi-step. |
-| `app/api/projects/[slug]/timeline/[stageId]/route.ts` | Clerk, Supabase | Stage update/delete | `requireRole` + `timeline-service` | `04`, `06` | `Done` | |
-| `app/api/projects/[slug]/timeline/[stageId]/start/route.ts` | Clerk, Supabase | Stage start mutation | `requireAuth` + `startTimelineStage` | `04`, `06` | `Done` | |
-| `app/api/projects/[slug]/timeline/[stageId]/complete/route.ts` | Clerk, Supabase | Stage completion mutation | `requireAuth` + `completeTimelineStage` | `04`, `06` | `Done` | Stage + project totals in one `$transaction`. |
-| `lib/actions/timeline.ts` | Clerk, Supabase | Timeline domain logic | `timeline-service` + session RBAC | `04`, `05`, `06` | `Done` | Server actions call shared service; moderator gate via Prisma `UserRole`. |
+| `app/api/projects/[slug]/timeline/route.ts` | Clerk, Supabase (was) | Timeline CRUD | `requireRole` + `timeline-service` | `04`, `05`, `06` | `Done` |
+| `app/api/projects/[slug]/timeline/[stageId]/route.ts` | Clerk, Supabase (was) | Stage update/delete | `requireRole` + `timeline-service` | `04`, `06` | `Done` |
+| `app/api/projects/[slug]/timeline/[stageId]/start/route.ts` | Clerk, Supabase (was) | Stage start mutation | `requireAuth` + `startTimelineStage` | `04`, `06` | `Done` |
+| `app/api/projects/[slug]/timeline/[stageId]/complete/route.ts` | Clerk, Supabase (was) | Stage completion mutation | `requireAuth` + `completeTimelineStage` | `04`, `06` | `Done` |
+| `lib/actions/timeline.ts` | Clerk, Supabase (was) | Timeline domain logic | `timeline-service` + session RBAC | `04`, `05`, `06` | `Done` |
 
 ## Pledges, Transactions, Voting, and Ledger
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/pledges/route.ts` | Clerk, Supabase | Pledge reads and writes | `requireRole` / `requireAuth` + `pledge-repository` + `pledge-service` | `04`, `05`, `06` | `Done` | Admin GET uses `listPledgesForAdmin`; POST uses `createPendingPledge` (Prisma). |
-| `app/api/pledges/export/route.ts` | Clerk, Supabase | Pledge export | Internal authz + ORM query/export | `04`, `05` | Done | `pledge-repository` + `requireRole`. |
-| `lib/actions/pledge.ts` | Clerk, Supabase | Pledge business logic | `pledge-service` + `pledge-repository` + Prisma | `04`, `06` | `Done` | `markPledgeAsCompleted` uses `prisma.$transaction`. |
-| `app/api/transactions/route.ts` | Clerk, Supabase | Transaction listing | Internal authz + ORM query | `04`, `05` | Done | `transaction-repository` + `requireRole`. |
-| `app/api/transactions/[id]/route.ts` | Clerk, Supabase | Transaction detail | `requireRole` + `updateTransactionStatusById` (Prisma `$transaction`) | `04`, `05`, `06` | `Done` | PATCH status updates via `transaction-repository` helpers. |
-| `app/api/transactions/create/route.ts` | Clerk, Supabase | Transaction creation | `requireAuth` + `transaction-write-service` (`createLedgerTransaction`) | `04`, `06` | `Done` | Prisma create wrapped in `$transaction` for extension point / consistency with other writes. |
-| `app/api/transactions/export/route.ts` | Clerk, Supabase | Transaction export | Internal authz + ORM query/export | `04`, `05` | Done | `transaction-repository` export list. |
-| `lib/actions/transaction.ts` | Supabase | Transaction query logic | Internal repository/service layer | `05`, `06` | Done | Server actions call `transaction-repository`. |
-| `app/api/voting/route.ts` | Supabase | Voting data reads/writes | `voting-service` (Prisma) | `05`, `06` | `Done` | GET uses `listProjectsInActiveVotingWindow`; vote writes go through `castVote` in `lib/actions` → service. |
-| `lib/actions/chart.ts` | Supabase | Financial chart/category reads and writes | Internal repository/service layer | `05`, `06` | Done | Maps legacy `charts` reads/writes to `ledger_accounts` via `ledger-account-repository`. |
-| `app/api/open-ledger-metrics/route.ts` | Supabase RPC | Public metrics endpoint | Service-layer aggregation or SQL view under internal DB ownership | `05` | Done | `ledger-metrics-repository` (approximate aggregate; see `05-data-access-repositories-and-read-migration.md` RPC notes). |
-| `app/api/marquee-data/route.ts` | Supabase RPC | Marquee data endpoint | Internal query/service implementation | `05` | Done | Returns `{ items, default_currency }` via `getMarqueePayload()`. |
-| `app/api/public-ledger/route.ts` | N/A (new) | Public ledger JSON for clients | Prisma-backed `public-ledger-repository` | `05` | Done | Added for `hooks/use-public-ledger.ts` (polling). |
-| `hooks/use-public-ledger.ts` | Supabase | Client ledger reads and realtime | Internal API polling or owned realtime strategy | `05` | Done | Fetches `/api/public-ledger`; Supabase realtime removed. |
+| `app/api/pledges/route.ts` | Clerk, Supabase (was) | Pledge reads and writes | `requireRole` / `requireAuth` + `pledge-repository` + `pledge-service` | `04`, `05`, `06` | `Done` |
+| `app/api/pledges/export/route.ts` | Clerk, Supabase (was) | Pledge export | `pledge-repository` + `requireRole` | `04`, `05` | `Done` |
+| `lib/actions/pledge.ts` | Clerk, Supabase (was) | Pledge business logic | `pledge-service` + Prisma | `04`, `06` | `Done` |
+| `app/api/transactions/route.ts` | Clerk, Supabase (was) | Transaction listing | `transaction-repository` + `requireRole` | `04`, `05` | `Done` |
+| `app/api/transactions/[id]/route.ts` | Clerk, Supabase (was) | Transaction detail | `requireRole` + repository helpers | `04`, `05`, `06` | `Done` |
+| `app/api/transactions/create/route.ts` | Clerk, Supabase (was) | Transaction creation | `requireAuth` + `transaction-write-service` | `04`, `06` | `Done` |
+| `app/api/transactions/export/route.ts` | Clerk, Supabase (was) | Transaction export | `transaction-repository` + `requireRole` | `04`, `05` | `Done` |
+| `lib/actions/transaction.ts` | Supabase (was) | Transaction query logic | `transaction-repository` | `05`, `06` | `Done` |
+| `app/api/voting/route.ts` | Supabase (was) | Voting data reads/writes | `voting-service` (Prisma) | `05`, `06` | `Done` |
+| `lib/actions/chart.ts` | Supabase (was) | Financial chart reads/writes | `ledger-account-repository` | `05`, `06` | `Done` |
+| `app/api/open-ledger-metrics/route.ts` | Supabase RPC (was) | Public metrics endpoint | `ledger-metrics-repository` | `05` | `Done` |
+| `app/api/marquee-data/route.ts` | Supabase RPC (was) | Marquee data endpoint | `getMarqueePayload()` | `05` | `Done` |
+| `app/api/public-ledger/route.ts` | N/A (new) | Public ledger JSON for clients | `public-ledger-repository` | `05` | `Done` |
+| `hooks/use-public-ledger.ts` | Supabase (was) | Client ledger reads | `/api/public-ledger` polling | `05` | `Done` |
 
 ## Cases and Supporting Reference Data
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/cases/create/route.ts` | Clerk, Supabase | Public case creation | `getSession` + `case-intake-service` (`prisma.$transaction`) | `03`, `06` | `Done` | Case + optional files in one transaction. |
-| `app/api/cases/route.ts` | Clerk, Supabase | Admin case listing | Internal authz + repository query | `04`, `05` | Done | `case-repository` + `requireRole`. |
-| `app/api/cases/upload/route.ts` | Supabase Storage (was) | Case file upload | `lib/storage` (S3/R2) | `07` | `Done` |
-| `lib/actions/cases.ts` | Supabase | Case data and stats | Internal repositories/services | `05`, `06` | Done | Reads and case admin mutations use Prisma (`case-repository` / `prisma`); align with `06` for transactional review flows if needed. |
-| `app/api/states/route.ts` | Supabase | State lookup | Internal repository query | `05` | Done | `state-repository`. |
-| `app/api/states/[state_id]/lgas/route.ts` | Supabase | LGA lookup | Internal repository query | `05` | Done | `state-repository`. |
+| `app/api/cases/create/route.ts` | Clerk, Supabase (was) | Public case creation | `getSession` + `case-intake-service` | `03`, `06` | `Done` |
+| `app/api/cases/route.ts` | Clerk, Supabase (was) | Admin case listing | `case-repository` + `requireRole` | `04`, `05` | `Done` |
+| `app/api/cases/upload/route.ts` | Supabase Storage (was) | Case file upload | `lib/storage` | `07` | `Done` |
+| `lib/actions/cases.ts` | Supabase (was) | Case data and stats | Prisma repositories / services | `05`, `06` | `Done` |
+| `app/api/states/route.ts` | Supabase (was) | State lookup | `state-repository` | `05` | `Done` |
+| `app/api/states/[state_id]/lgas/route.ts` | Supabase (was) | LGA lookup | `state-repository` | `05` | `Done` |
 
 ## Events, Settings, and Utilities
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/events/route.ts` | Supabase | Events read/write | `event-service` (`listEventsForPublicDashboard`) | `05`, `06` | `Done` | GET only in app today; Prisma-backed list. Event **mutations** remain a future surface if product adds POST/PATCH (not present in prior handler). |
-| `lib/actions/settings.ts` | Clerk, Supabase | Settings read/write and validation | Internal authz + repositories + audit services | `04`, `05`, `06` | Done | Prisma `settings` + `getCurrentUser` / `getPrimaryRole` for access checks; audit polish in `06`. |
-| `lib/utils/settings.ts` | Supabase | Settings utility access | Internal repository/service access | `05` | Done | Uses `settings-repository` + cache. |
-| `lib/actions/index.ts` | Clerk, Supabase | Mixed helper queries and role lookups | Split into internal auth and data modules | `03`, `04`, `05`, `06` | In Progress | `saveVote` uses `voting-service` (Prisma). `syncRoles` / `syncRole` still write legacy Supabase `profiles.role` for Clerk-era denormalization (`09` cleanup). |
-| `lib/actions/users.ts` | Clerk, Supabase | User operations | Prisma `User` / `UserRole` + `getSession` | `05`, `06` | `Done` | Admin role updates, deactivate (status), user details, `getUser` / `getUsers` no longer call Clerk. |
+| `app/api/events/route.ts` | Supabase (was) | Events read/write | `event-service` | `05`, `06` | `Done` |
+| `lib/actions/settings.ts` | Clerk, Supabase (was) | Settings read/write | Prisma + auth helpers | `04`, `05`, `06` | `Done` |
+| `lib/utils/settings.ts` | Supabase (was) | Settings utility access | `settings-repository` + cache | `05` | `Done` |
+| `lib/actions/index.ts` | Clerk, Supabase (was) | Vote-related server actions | `saveVote` / `canUserVote` + Prisma only (`09`) | `03`–`06`, `09` | `Done` |
+| `lib/actions/users.ts` | Clerk, Supabase (was) | User operations | Prisma `User` / `UserRole` + `getSession` | `05`, `06` | `Done` |
 
 ## Uploads and Webhooks
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/upload-image/route.ts` | Clerk, Supabase Storage (was) | Project or general image upload | `requireAuth` + `lib/storage` | `07` | `Done` |
-| `app/api/webhooks/switchapp/route.ts` | Supabase | Payment webhook side effects | `switchapp-webhook-service` (`applySwitchappChargeOutcome`, Prisma `$transaction`) | `06` | `Done` | Replaces RPC increment with `currentAmount` increment on completed pledge payments. |
+| `app/api/upload-image/route.ts` | Clerk, Supabase Storage (was) | Image upload | `requireAuth` + `lib/storage` | `07` | `Done` |
+| `app/api/webhooks/switchapp/route.ts` | Supabase (was) | Payment webhook side effects | `switchapp-webhook-service` | `06` | `Done` |
 
 ## UI Components with Auth-Specific Coupling
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `components/components/header.tsx` | Clerk | User-aware navigation | Internal session-aware navigation | `03` | Not Started |
-| `components/components/edit-profile-form.tsx` | Clerk | Profile edits | Internal auth/session and profile service | `03`, `06` | Not Started |
-| `components/components/user-details.tsx` | Clerk | User session display | Internal session model | `03` | Not Started |
-| `components/components/code-switcher.tsx` | Clerk | Session/org example UI | Refactor or remove | `03`, `09` | Not Started |
-| `components/components/vote-button.tsx` | Clerk | Auth-aware voting action | Internal auth/session hook and service | `03`, `06` | Not Started |
+| `components/components/header.tsx` | Clerk (was) | User-aware navigation | `useCurrentSession` + sign-in/out helpers | `03` | `Done` |
+| `components/components/edit-profile-form.tsx` | Clerk (was) | Profile edits | Session + `lib/actions/users` | `03`, `06` | `Done` |
+| `components/components/user-details.tsx` | Clerk (was) | User session display | Session-driven UI | `03` | `Done` |
+| `components/components/code-switcher.tsx` | Clerk (was) | Session debug UI | `useCurrentSession` | `03`, `09` | `Done` |
+| `components/components/vote-button.tsx` | Clerk (was) | Auth-aware voting action | `useCurrentUser` + `saveVote` | `03`, `06` | `Done` |
+| `components/components/dashboard-tab.tsx` | Clerk types (was) | Welcome / dashboard tab | First-party `DashboardUser` prop type | `03`, `09` | `Done` |
 
-## Legacy Cleanup Candidates
+## Legacy cleanup (workstream `09`)
 
-These should be removed once all replacements are complete.
-
-| File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
-| --- | --- | --- | --- | --- | --- |
-| `lib/supabase-provider.tsx` | Supabase, Clerk | Legacy provider | Remove after migration | `09` | Not Started |
-| `lib/supabase.ts` | Supabase | Legacy client | Remove after migration | `09` | Not Started |
-| `lib/supabase-admin.ts` | Supabase, Clerk | Legacy admin bridge | Remove after migration | `09` | Not Started |
-| `lib/clerk.ts` | Clerk | Legacy auth helper | Remove after migration | `09` | Not Started |
-| `app/api/webhooks/user/route.ts` | Clerk | Legacy Clerk webhook | Remove after migration | `09` | Not Started |
+| File | Outcome | Notes |
+| --- | --- | --- |
+| `lib/supabase-provider.tsx` | Deleted | |
+| `lib/supabase.ts` | Deleted | |
+| `lib/supabase-admin.ts` | Deleted | |
+| `lib/clerk.ts` | Deleted | Replaced by `@/lib/auth/server` |
+| `app/api/webhooks/user/route.ts` | Deleted | |
+| `components/components/clerk-logo.tsx` | Deleted | Unused sample |
+| `scripts/migration.js` | Deleted | Old Clerk CSV helper |
 
 ## Notes
 
-1. This map should be updated as workstreams begin. Workstream prompt files now live under `docs/transition_workstreams/`.
+1. Workstream prompt files live under `docs/transition_workstreams/`.
 2. If a file is split during migration, add the new files here and mark the original accordingly.
-3. If a responsibility moves from route handlers into services, the route should still remain listed until fully converted.
+3. Legacy **export** still targets Supabase **PostgREST** via `fetch` in `scripts/migration/supabase-export.ts` (no `@supabase/supabase-js` in `package.json`).

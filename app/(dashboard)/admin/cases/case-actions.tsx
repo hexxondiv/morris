@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { fetchCaseById, updateCaseStatus, addCaseNote, acceptCase, rejectCase } from "@/lib/actions/cases";
 import { formatDateSmart } from "@/lib/utils/date-time-formater";
 import Image from "next/image";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { CheckCircle, XCircle } from "lucide-react";
 
 interface CaseActionsProps {
@@ -49,7 +49,8 @@ const helpTypeLabels = {
 };
 
 export function CaseActions({ caseItem }: CaseActionsProps) {
-  const { user } = useUser();
+  const { data: session } = useSession();
+  const user = session?.user;
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
@@ -105,12 +106,15 @@ export function CaseActions({ caseItem }: CaseActionsProps) {
       return;
     }
 
-    if (!user) {
+    if (!user?.id) {
       toast.error("User not authenticated");
       return;
     }
 
-    const adminName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Admin";
+    const adminName =
+      (user.name?.trim() ||
+        [user.firstName, user.lastName].filter(Boolean).join(" ").trim()) ||
+      "Admin";
 
     startTransition(async () => {
       const result = await addCaseNote(caseItem.id, newNote, user.id, adminName);
@@ -129,12 +133,15 @@ export function CaseActions({ caseItem }: CaseActionsProps) {
   };
 
   const handleAcceptCase = async () => {
-    if (!user) {
+    if (!user?.id) {
       toast.error("User not authenticated");
       return;
     }
 
-    const adminName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Admin";
+    const adminName =
+      (user.name?.trim() ||
+        [user.firstName, user.lastName].filter(Boolean).join(" ").trim()) ||
+      "Admin";
 
     startTransition(async () => {
       const result = await acceptCase(caseItem.id, user.id, adminName);
@@ -151,12 +158,15 @@ export function CaseActions({ caseItem }: CaseActionsProps) {
   };
 
   const handleRejectCase = async () => {
-    if (!user) {
+    if (!user?.id) {
       toast.error("User not authenticated");
       return;
     }
 
-    const adminName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Admin";
+    const adminName =
+      (user.name?.trim() ||
+        [user.firstName, user.lastName].filter(Boolean).join(" ").trim()) ||
+      "Admin";
 
     startTransition(async () => {
       const result = await rejectCase(caseItem.id, user.id, adminName);

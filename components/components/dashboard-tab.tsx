@@ -10,12 +10,16 @@ import {
 } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
-import { UserResource } from "@clerk/types";
 import { formatCurrency } from "@/lib/utils";
 import ContributionEditForm from "./contribution-edit-form";
 
+type DashboardUser = {
+  firstName?: string | null;
+  name?: string | null;
+} | null;
+
 interface DashboardProps {
-  user: UserResource | null | undefined;
+  user: DashboardUser | undefined;
 }
 function DashboardTab({ user }: DashboardProps) {
   return (
@@ -47,7 +51,7 @@ function DashboardTab({ user }: DashboardProps) {
           <div className="flex space-x-4 border-b border-theme-50 pb-6">
             <span className="text-xl sm:text-3xl">👋🏾</span>
             <span className="text-lg sm:text-2xl font-medium">
-              Welcome, {user?.firstName}
+              Welcome, {user?.firstName || user?.name || "there"}
             </span>
           </div>
           <div className="space-y-4">

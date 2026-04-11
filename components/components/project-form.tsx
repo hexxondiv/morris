@@ -1,8 +1,7 @@
 // components/forms/project-form.tsx
 /**
- * Workstream 06 boundary: project create/update, timelines, and voting periods still use the
- * Supabase JS client for reads and writes. Cover images upload via `/api/upload-image` and
- * first-party object storage (workstream `07`); this form does not call Supabase Storage.
+ * Project create/update uses `/api/projects` (POST) and `/api/projects/[slug]` (PUT) with
+ * Prisma-backed handlers. Cover images use `/api/upload-image` and first-party storage.
  */
 "use client";
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -20,7 +19,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { SimpleEditor } from "../tiptap-templates/simple/simple-editor";
 import slugify from "slugify";
@@ -33,10 +32,8 @@ import {
 } from "lucide-react";
 import { cn, isAuthorized } from "@/lib/utils";
 import { toast } from "sonner";
-import { getUserRoleClient } from "@/lib/auth-client";
 import { DateTimePicker } from "./date-picker";
 import { useUserRole } from "@/hooks/use-role";
-import { supabase } from "@/lib/supabase";
 
 // Define props for CoverImageUploader
 interface CoverImageUploaderProps {
@@ -356,8 +353,8 @@ function TimelineSetup({
 
 export default function ProjectForm({ project, onClose }: ProjectFormProps) {
   const router = useRouter();
-  // const { supabase } = useSupabase();
-  const { userId } = useAuth();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
   const [bodyHtml, setBodyHtml] = useState<string>(project?.body_html || "");
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(
     project?.cover_image || null
@@ -477,9 +474,6 @@ export default function ProjectForm({ project, onClose }: ProjectFormProps) {
 
   const onSubmit = async (data: ProjectSchema) => {
     try {
-      if (!supabase) {
-        throw new Error("Supabase client not initialized");
-      }
       if (!userId) {
         throw new Error("User not authenticated");
       }
@@ -509,62 +503,40 @@ export default function ProjectForm({ project, onClose }: ProjectFormProps) {
         cover_image: data.cover_image || null,
         body_html: bodyHtml || null,
         slug: generatedSlug,
-        start_date: undefined,
-        end_date: undefined,
+        start_date: data.start_date,
+        end_date: data.end_date,
       };
 
-      // Check for slug uniqueness (excluding current project)
-      if (generatedSlug) {
-        const { data: existing } = await supabase
-          .from("projects")
-          .select("id")
-          .eq("slug", generatedSlug)
-          .neq("id", project?.id || "")
-          .single();
+      const editSlug = project?.slug;
+      const isEdit = Boolean(project?.id && editSlug);
+      const saveUrl = isEdit && editSlug
+        ? `/api/projects/${encodeURIComponent(editSlug)}`
+        : "/api/projects";
+      const saveMethod = isEdit ? "PUT" : "POST";
 
-        if (existing) {
-          throw new Error("Project slug already exists");
-        }
+      const saveRes = await fetch(saveUrl, {
+        method: saveMethod,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(projectData),
+      });
+
+      const saveJson = (await saveRes.json().catch(() => ({}))) as {
+        error?: string;
+        project?: { id: string; slug: string };
+      };
+
+      if (!saveRes.ok) {
+        throw new Error(
+          typeof saveJson.error === "string"
+            ? saveJson.error
+            : "Failed to save project"
+        );
       }
 
-      const { data: updatedProject, error } = await supabase
-        .from("projects")
-        .upsert(projectData, { onConflict: "id" })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Supabase error:", error);
-        throw error;
-      }
-
-      // Handle voting periods:
-      if (data.status === "voting" && data.start_date && data.end_date) {
-        const votingPeriodData = {
-          project_id: updatedProject.id,
-          start_date: data.start_date,
-          end_date: data.end_date,
-        };
-
-        const { error: votingPeriodError } = await supabase
-          .from("voting_periods")
-          .upsert(votingPeriodData, { onConflict: "project_id" });
-
-        if (votingPeriodError) {
-          console.error("Supabase voting period error:", votingPeriodError);
-          throw votingPeriodError;
-        }
-      } else if (data.status !== "voting" && project?.id) {
-        // Delete voting period if status is not voting
-        const { error: deleteError } = await supabase
-          .from("voting_periods")
-          .delete()
-          .eq("project_id", project.id);
-
-        if (deleteError) {
-          console.error("Error deleting voting period:", deleteError);
-          throw deleteError;
-        }
+      const updatedProject = saveJson.project;
+      if (!updatedProject?.slug) {
+        throw new Error("Project slug is missing");
       }
 
       // Handle timeline creation if transitioning to active

@@ -41,13 +41,13 @@ Allowed status values:
 | --- | --- | --- | --- | --- | --- |
 | `01` | Security and Environment Hardening | `Done` | None | None | Sanitized `.env.example` and added `docs/environment-reference.md` |
 | `02` | Target Schema and Domain Model | `Done` | `01` | None | MySQL Prisma schema, initial migration, RPC mapping, and deterministic super admin bootstrap are committed |
-| `03` | Auth.js and Google Sign-In | `Not Started` | `02` | parts of `05` | Must establish session, identity, and super admin-compatible auth flow |
-| `04` | Authorization, Middleware, and Role System | `Not Started` | `03` | parts of `05` | Should not begin until core auth/session primitives are stable |
+| `03` | Auth.js and Google Sign-In | `Done` | `02` | parts of `05` | Session, Google OAuth, and Prisma adapter are live |
+| `04` | Authorization, Middleware, and Role System | `Done` | `03` | parts of `05` | Middleware + `requireAuth` / `requireRole` + DB-backed roles |
 | `05` | Data Access Layer and Read Migration | `Done` | `02` | parts of `03`, `04`, `07` | Prisma repositories added; primary read routes/actions in map migrated; see `05-data-access-repositories-and-read-migration.md` for RPC gaps and `file-by-file-migration-map.md` for deferred files (`project-form`, `transactions/[id]` PATCH, legacy Supabase client cleanup `09`). |
 | `06` | Write Paths and Transactional Services | `Done` | `04`, `05` | parts of `07` | Core domain writes moved to Prisma services with explicit `$transaction` boundaries; storage and Clerk-era shims remain for `07`/`09`. |
 | `07` | Storage and File Migration | `Done` | `02` | `05`, later `06` | Upload routes use `lib/storage` + Auth.js `requireAuth`; legacy Supabase object URLs remain valid until `08`/`09` |
 | `08` | Data Migration and Verification | `Done` | `02`, `03`, `05`, `06`, relevant `07` | final stabilization work only | Tooling + runbook: `scripts/migration/cli.ts`, `docs/runbook-production-migration.md` |
-| `09` | Cutover, Cleanup, and Dependency Removal | `Not Started` | `03`, `04`, `05`, `06`, `07`, `08` | None | Final state requires no Clerk or Supabase dependencies and a working system |
+| `09` | Cutover, Cleanup, and Dependency Removal | `Done` | `03`, `04`, `05`, `06`, `07`, `08` | None | Clerk/Supabase JS removed from app runtime; Prisma + Auth.js + S3 only |
 
 ## Required Sequence
 

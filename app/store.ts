@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { type SupabaseClient } from '@supabase/supabase-js'
 import { persist } from 'zustand/middleware';
 
 

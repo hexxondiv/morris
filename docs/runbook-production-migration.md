@@ -20,7 +20,7 @@ Application request handlers **must not** perform production migration writes. U
 | Storage URLs | Optional pass | `rewrite-urls` subcommand when `S3_PUBLIC_BASE_URL` (workstream 07) replaces Supabase public object URLs. |
 | Cases / case files | **Deferred** | Not in checked-in `supabase/remote_schema.sql`. If your production Supabase has `cases` / `case_files`, extend export + transform in a follow-up PR or import via a separate one-off script after schema alignment. |
 | Events | Export only | Optional `events.json` from export; **import not implemented** in v1 CLI (low risk / can be added similarly to settings). |
-| Clerk removal / Supabase client removal | **Workstream 09** | Optional Clerk JSON is read **offline** for verification only; no Clerk API calls in this tooling. |
+| Clerk removal / Supabase client removal | **Workstream 09** | Optional Clerk JSON is read **offline** for verification only; no Clerk API calls in this tooling. The `export` step calls Supabase **PostgREST** via `fetch` (no `@supabase/supabase-js` in the app or CLI dependency graph). |
 
 ## Prerequisites
 

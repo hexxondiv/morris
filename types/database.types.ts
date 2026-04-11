@@ -1,6 +1,6 @@
 // lib/types.ts
 export interface Profile {
-  id: string; // Clerk user ID (UUID)
+  id: string; // Internal user id (UUID)
   email: string;
   first_name: string | null;
   last_name: string | null;
@@ -10,7 +10,7 @@ export interface Profile {
 
 export interface Cause {
   id: string; // UUID
-  creator_id: string; // Clerk user ID (UUID)
+  creator_id: string; // Internal user id (UUID)
   title: string;
   description: string;
   goal_amount: number;
@@ -22,7 +22,7 @@ export interface Cause {
 
 export interface Pledge {
   id: string; // UUID
-  user_id: string; // Clerk user ID (UUID)
+  user_id: string; // Internal user id (UUID)
   cause_id: string; // UUID
   amount: number;
   pledge_type: 'one_time' | 'recurring';
@@ -35,7 +35,7 @@ export interface Pledge {
 export interface Transaction {
   id: string; // UUID
   pledge_id: string; // UUID
-  user_id: string; // Clerk user ID (UUID)
+  user_id: string; // Internal user id (UUID)
   amount: number;
   payment_method: string;
   payment_status: 'pending' | 'completed' | 'failed' | 'refunded';
@@ -59,7 +59,7 @@ export interface Event {
 
 export interface Vote {
   id: string; // UUID
-  user_id: string; // Clerk user ID (UUID)
+  user_id: string; // Internal user id (UUID)
   cause_id: string; // UUID
   vote_value: boolean;
   created_at: string; // ISO timestamp

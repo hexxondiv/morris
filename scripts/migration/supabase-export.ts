@@ -1,4 +1,3 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { MigrationReport } from "./report";
@@ -21,38 +20,61 @@ const OPTIONAL_TABLES = [
   "events",
 ] as const;
 
+function restBase(supabaseUrl: string): string {
+  const u = supabaseUrl.replace(/\/$/, "");
+  return `${u}/rest/v1`;
+}
+
 async function fetchAllRows(
-  client: SupabaseClient,
+  supabaseUrl: string,
+  serviceKey: string,
   table: string,
   report: MigrationReport
 ): Promise<Record<string, unknown>[]> {
   const pageSize = 1000;
   let offset = 0;
   const out: Record<string, unknown>[] = [];
+  const base = restBase(supabaseUrl);
+
   for (;;) {
-    const { data, error } = await client
-      .from(table)
-      .select("*")
-      .range(offset, offset + pageSize - 1);
-    if (error) {
-      throw new Error(`Supabase export failed for "${table}": ${error.message}`);
+    const url = new URL(`${base}/${table}`);
+    url.searchParams.set("select", "*");
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        Range: `${offset}-${offset + pageSize - 1}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(
+        `Supabase export failed for "${table}" (${res.status}): ${text.slice(0, 500)}`
+      );
     }
-    const batch = (data ?? []) as Record<string, unknown>[];
+
+    const batch = (await res.json()) as Record<string, unknown>[];
     out.push(...batch);
+    report.log("info", `Exported ${batch.length} rows from ${table} (offset ${offset})`);
     if (batch.length < pageSize) break;
     offset += pageSize;
   }
-  report.log("info", `Exported ${out.length} rows from ${table}`);
+
+  report.log("info", `Exported ${out.length} total rows from ${table}`);
   return out;
 }
 
 async function tryFetchOptional(
-  client: SupabaseClient,
+  supabaseUrl: string,
+  serviceKey: string,
   table: string,
   report: MigrationReport
 ): Promise<Record<string, unknown>[]> {
   try {
-    return await fetchAllRows(client, table, report);
+    return await fetchAllRows(supabaseUrl, serviceKey, table, report);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     report.log("warn", `Optional table "${table}" not exported`, { reason: msg });
@@ -75,15 +97,14 @@ export async function runSupabaseExport(opts: ExportOptions): Promise<void> {
   }
 
   mkdirSync(opts.outDir, { recursive: true });
-  const client = createClient(url, key, { auth: { persistSession: false } });
 
   for (const table of CORE_TABLES) {
-    const rows = await fetchAllRows(client, table, opts.report);
+    const rows = await fetchAllRows(url, key, table, opts.report);
     writeFileSync(join(opts.outDir, `${table}.json`), JSON.stringify(rows, null, 2), "utf8");
   }
 
   for (const table of OPTIONAL_TABLES) {
-    const rows = await tryFetchOptional(client, table, opts.report);
+    const rows = await tryFetchOptional(url, key, table, opts.report);
     writeFileSync(join(opts.outDir, `${table}.json`), JSON.stringify(rows, null, 2), "utf8");
   }
 

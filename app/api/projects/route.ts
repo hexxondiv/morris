@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { listProjects } from "@/lib/repositories/project-repository";
+import { Prisma } from "@prisma/client";
+import slugify from "slugify";
+import { requireRole } from "@/lib/auth/server";
+import { projectSchema } from "@/lib/zod-schema";
+import {
+  createProjectRecord,
+  isProjectSlugTaken,
+  listProjects,
+  mapProjectDetailRow,
+  syncProjectVotingPeriodByStatus,
+} from "@/lib/repositories/project-repository";
 
 const querySchema = z.object({
   page: z
@@ -73,6 +83,99 @@ const querySchema = z.object({
     .optional()
     .transform((val) => val !== "false"),
 });
+
+export async function POST(request: NextRequest) {
+  const auth = await requireRole("moderator");
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const body = await request.json();
+    const validatedData = projectSchema.safeParse(body);
+
+    if (!validatedData.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid project data",
+          details: validatedData.error.issues,
+        },
+        { status: 400 }
+      );
+    }
+
+    const d = validatedData.data;
+    const generatedSlug = d.title
+      ? slugify(d.title.toLowerCase(), { lower: true, strict: true })
+      : d.slug?.trim() || "";
+
+    if (!generatedSlug) {
+      return NextResponse.json(
+        { error: "Could not derive a URL slug from the project title" },
+        { status: 400 }
+      );
+    }
+
+    if (await isProjectSlugTaken(generatedSlug)) {
+      return NextResponse.json(
+        { error: "Project slug already exists" },
+        { status: 409 }
+      );
+    }
+
+    if (d.status === "voting" && (!d.start_date || !d.end_date)) {
+      return NextResponse.json(
+        {
+          error: "Voting status requires start_date and end_date",
+        },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const row = await createProjectRecord({
+        creatorId: auth.userId,
+        slug: generatedSlug,
+        title: d.title,
+        description: d.description,
+        goalAmount: d.goal_amount,
+        currentAmount: d.current_amount ?? 0,
+        status: d.status,
+        state: d.state ?? null,
+        country: d.country ?? null,
+        sector: d.sector ?? null,
+        bodyHtml: d.body_html ?? null,
+        coverImageUrl: d.cover_image ?? null,
+      });
+
+      await syncProjectVotingPeriodByStatus({
+        projectId: row.id,
+        apiStatus: d.status,
+        startDateIso: d.start_date,
+        endDateIso: d.end_date,
+      });
+
+      return NextResponse.json({
+        project: mapProjectDetailRow({ ...row, votingPeriod: null }),
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "Project slug already exists" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error creating project:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {

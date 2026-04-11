@@ -31,7 +31,6 @@ export default function ProjectsPage({
 }: ProjectsPageProps) {
   const [projects, setProjects] = useState<ProjectSchema[]>([]);
   const [displayedProjects, setDisplayedProjects] = useState<ProjectSchema[]>([]);
-  // const { supabase } = useSupabase();
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [isFetching, setIsFetching] = useState<boolean>(false);

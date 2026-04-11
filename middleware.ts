@@ -3,9 +3,8 @@
  * Full authentication and role checks run in route handlers via `@/lib/auth/server`.
  *
  * Public API prefixes must stay aligned with `app/api` route modules and public pages
- * that call those endpoints without a session. Data-layer routes still using legacy
- * Supabase or Clerk inside handlers belong to workstreams 05 and 06; this layer only gates on
- * cookie presence for `/dashboard`, `/admin`, and `/api` (minus listed public paths).
+ * that call those endpoints without a session. This layer gates on session cookies for
+ * `/dashboard`, `/admin`, and `/api` (minus listed public paths).
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -19,12 +18,15 @@ function hasSessionCookie(request: NextRequest) {
   ].some((cookieName) => request.cookies.has(cookieName));
 }
 
-function isPublicRoute(pathname: string) {
+function isPublicRoute(pathname: string, method: string) {
+  if (pathname.startsWith("/api/projects")) {
+    return method === "GET";
+  }
+
   return (
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/open-ledger-metrics") ||
     pathname.startsWith("/api/marquee-data") ||
-    pathname.startsWith("/api/projects") ||
     pathname.startsWith("/projects") ||
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/api/settings/public") ||
@@ -46,7 +48,7 @@ function isProtectedRoute(pathname: string) {
 export default function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  if (!isProtectedRoute(pathname) || isPublicRoute(pathname)) {
+  if (!isProtectedRoute(pathname) || isPublicRoute(pathname, request.method)) {
     return NextResponse.next();
   }
 

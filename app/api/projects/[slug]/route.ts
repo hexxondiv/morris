@@ -5,12 +5,15 @@ import { isAuthorized } from "@/lib/utils";
 import { getSession } from "@/lib/auth/server";
 import { normalizeRole } from "@/lib/auth/roles";
 import { requireRole } from "@/lib/auth/server";
+import { Prisma } from "@prisma/client";
 import {
   getProjectBySlugOrId,
+  isProjectSlugTaken,
   listEventsForProject,
   mapProjectDetailRow,
   mapTimelineStages,
   mapVotingPeriod,
+  syncProjectVotingPeriodByStatus,
   updateProjectBySlugOrId,
 } from "@/lib/repositories/project-repository";
 
@@ -143,23 +146,69 @@ export async function PUT(
     }
 
     const d = validatedData.data;
-    const updated = await updateProjectBySlugOrId(slug, {
-      title: d.title,
-      description: d.description,
-      goal_amount: d.goal_amount,
-      status: d.status,
-      state: d.state ?? null,
-      country: d.country ?? null,
-      sector: d.sector ?? null,
-      body_html: d.body_html ?? null,
-      current_amount: d.current_amount,
-      slug: d.slug,
-      creator_id: d.creator_id,
-    });
+    const existing = await getProjectBySlugOrId(slug);
+    if (!existing) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
 
-    return NextResponse.json({
-      project: { ...updated, voting_periods: null },
-    });
+    const nextSlug = d.slug ?? existing.slug;
+    if (
+      nextSlug &&
+      (await isProjectSlugTaken(nextSlug, existing.id))
+    ) {
+      return NextResponse.json(
+        { error: "Project slug already exists" },
+        { status: 409 }
+      );
+    }
+
+    if (d.status === "voting" && (!d.start_date || !d.end_date)) {
+      return NextResponse.json(
+        {
+          error: "Voting status requires start_date and end_date",
+        },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const updated = await updateProjectBySlugOrId(slug, {
+        title: d.title,
+        description: d.description,
+        goal_amount: d.goal_amount,
+        status: d.status,
+        state: d.state ?? null,
+        country: d.country ?? null,
+        sector: d.sector ?? null,
+        body_html: d.body_html ?? null,
+        cover_image: d.cover_image ?? null,
+        current_amount: d.current_amount,
+        slug: d.slug,
+        creator_id: d.creator_id,
+      });
+
+      await syncProjectVotingPeriodByStatus({
+        projectId: existing.id,
+        apiStatus: d.status,
+        startDateIso: d.start_date,
+        endDateIso: d.end_date,
+      });
+
+      return NextResponse.json({
+        project: { ...updated, voting_periods: null },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "Project slug already exists" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
   } catch (error) {
     console.error("Error in project update API:", error);
     return NextResponse.json(
