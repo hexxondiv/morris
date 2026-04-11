@@ -10,7 +10,12 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:bootstrap-super-admin": "tsx prisma/seed.ts --bootstrap-super-admin"
+    "db:bootstrap-super-admin": "tsx prisma/seed.ts --bootstrap-super-admin",
+    "migration:export": "tsx scripts/migration/cli.ts export",
+    "migration:transform": "tsx scripts/migration/cli.ts transform",
+    "migration:import": "tsx scripts/migration/cli.ts import",
+    "migration:verify": "tsx scripts/migration/cli.ts verify",
+    "migration:rewrite-urls": "tsx scripts/migration/cli.ts rewrite-urls"
   },
   "dependencies": {
     "@auth/core": "^0.41.0",

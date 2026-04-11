@@ -109,3 +109,9 @@ Provide:
 1. The migration scripts added
 2. The verification checks implemented
 3. Any unresolved data-mapping ambiguities
+
+## Implementation Reference
+
+- Orchestrated CLI: `scripts/migration/cli.ts` (subcommands: `export`, `transform`, `import`, `verify`, `rewrite-urls`).
+- Operator runbook: [Production migration runbook](../runbook-production-migration.md).
+- npm scripts: `migration:export`, `migration:transform`, `migration:import`, `migration:verify`, `migration:rewrite-urls` in `package.json`.

@@ -46,7 +46,7 @@ Allowed status values:
 | `05` | Data Access Layer and Read Migration | `Done` | `02` | parts of `03`, `04`, `07` | Prisma repositories added; primary read routes/actions in map migrated; see `05-data-access-repositories-and-read-migration.md` for RPC gaps and `file-by-file-migration-map.md` for deferred files (`project-form`, `transactions/[id]` PATCH, legacy Supabase client cleanup `09`). |
 | `06` | Write Paths and Transactional Services | `Done` | `04`, `05` | parts of `07` | Core domain writes moved to Prisma services with explicit `$transaction` boundaries; storage and Clerk-era shims remain for `07`/`09`. |
 | `07` | Storage and File Migration | `Done` | `02` | `05`, later `06` | Upload routes use `lib/storage` + Auth.js `requireAuth`; legacy Supabase object URLs remain valid until `08`/`09` |
-| `08` | Data Migration and Verification | `Not Started` | `02`, `03`, `05`, `06`, relevant `07` | final stabilization work only | Can prepare earlier, but execution waits for target stability |
+| `08` | Data Migration and Verification | `Done` | `02`, `03`, `05`, `06`, relevant `07` | final stabilization work only | Tooling + runbook: `scripts/migration/cli.ts`, `docs/runbook-production-migration.md` |
 | `09` | Cutover, Cleanup, and Dependency Removal | `Not Started` | `03`, `04`, `05`, `06`, `07`, `08` | None | Final state requires no Clerk or Supabase dependencies and a working system |
 
 ## Required Sequence
