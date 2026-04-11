@@ -40,7 +40,7 @@ Allowed status values:
 | Workstream | Title | Status | Depends On | Can Run In Parallel With | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `01` | Security and Environment Hardening | `Done` | None | None | Sanitized `.env.example` and added `docs/environment-reference.md` |
-| `02` | Target Schema and Domain Model | `Not Started` | `01` | None | Must lock the MySQL target model and super admin bootstrap strategy |
+| `02` | Target Schema and Domain Model | `Done` | `01` | None | MySQL Prisma schema, initial migration, RPC mapping, and deterministic super admin bootstrap are committed |
 | `03` | Auth.js and Google Sign-In | `Not Started` | `02` | parts of `05` | Must establish session, identity, and super admin-compatible auth flow |
 | `04` | Authorization, Middleware, and Role System | `Not Started` | `03` | parts of `05` | Should not begin until core auth/session primitives are stable |
 | `05` | Data Access Layer and Read Migration | `Not Started` | `02` | parts of `03`, `04`, `07` | Defines repository and query patterns reused by `06` |

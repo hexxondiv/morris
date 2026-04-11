@@ -1,0 +1,732 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "foreignKeys"
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum UserOnboardingState {
+  BOOTSTRAPPED
+  PENDING_PROFILE
+  COMPLETE
+}
+
+enum ProjectStatus {
+  DRAFT
+  PROPOSED
+  VOTING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum TimelineStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProjectStageStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum ProjectStageMediaKind {
+  PLANNED
+  COMPLETION
+}
+
+enum PledgeType {
+  ONE_TIME
+  RECURRING
+}
+
+enum PledgeInterval {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum PledgeStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PaymentDay {
+  TODAY
+  FIRST
+  TWENTY_EIGHTH
+}
+
+enum TransactionDirection {
+  CREDIT
+  DEBIT
+}
+
+enum TransactionKind {
+  PLEDGE
+  DONATION
+  DEPLOYMENT
+  EXPENSE
+  REFUND
+  ADJUSTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum LedgerAccountCategory {
+  INCOME
+  DEPLOYMENT
+  EXPENSE
+  REFUND
+  ADJUSTMENT
+}
+
+enum VoteChoice {
+  SUPPORT
+  OPPOSE
+  ABSTAIN
+}
+
+enum CaseStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+  COMPLETED
+  CLOSED
+}
+
+enum ReportingFor {
+  MYSELF
+  SOMEONE_ELSE
+}
+
+enum HelpType {
+  SCHOOL_FEES
+  EDUCATIONAL_MATERIALS
+  INFRASTRUCTURE
+  SCHOLARSHIP
+  HEALTH_WELFARE
+  OTHER
+}
+
+enum CaseFileKind {
+  SUPPORTING_DOCUMENT
+  IDENTIFICATION
+  MEDICAL_RECORD
+  INVOICE
+  OTHER
+}
+
+enum SettingDataType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+  EMAIL
+  URL
+  COLOR
+}
+
+enum SettingAccessLevel {
+  PUBLIC
+  PROTECTED
+  SENSITIVE
+}
+
+enum SettingCacheStrategy {
+  STATIC
+  DYNAMIC
+  REALTIME
+}
+
+enum EventType {
+  MEETING
+  FUNDRAISER
+  UPDATE
+  OTHER
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELED
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+  JOB
+  WEBHOOK
+}
+
+model User {
+  id                  String              @id @default(uuid()) @db.Char(36)
+  email               String              @unique @db.VarChar(191)
+  displayName         String?             @map("display_name") @db.VarChar(191)
+  firstName           String?             @map("first_name") @db.VarChar(100)
+  lastName            String?             @map("last_name") @db.VarChar(100)
+  avatarUrl           String?             @map("avatar_url") @db.Text
+  emailVerifiedAt     DateTime?           @map("email_verified_at")
+  status              UserStatus          @default(ACTIVE)
+  onboardingState     UserOnboardingState @default(PENDING_PROFILE) @map("onboarding_state")
+  bootstrapSeededAt   DateTime?           @map("bootstrap_seeded_at")
+  lastSignedInAt      DateTime?           @map("last_signed_in_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  accounts            Account[]
+  sessions            Session[]
+  profile             Profile?
+  userRoles           UserRole[]
+  projectsCreated     Project[]           @relation("ProjectCreator")
+  roleAssignmentsMade UserRole[]          @relation("UserRoleAssignedBy")
+  pledges             Pledge[]
+  transactions        Transaction[]
+  votes               Vote[]
+  casesReported       Case[]              @relation("CaseReporter")
+  casesAssigned       Case[]              @relation("CaseAssignee")
+  casesReviewed       Case[]              @relation("CaseReviewer")
+  caseFilesUploaded   CaseFile[]          @relation("CaseFileUploader")
+  caseNotes           CaseNote[]
+  settingsCreated     Setting[]           @relation("SettingsCreatedBy")
+  settingsUpdated     Setting[]           @relation("SettingsUpdatedBy")
+  projectTimelines    ProjectTimeline[]   @relation("TimelineCreatedBy")
+  projectStagesMade   ProjectStage[]      @relation("StageCreatedBy")
+  projectStagesDone   ProjectStage[]      @relation("StageCompletedBy")
+  eventsCreated       Event[]             @relation("EventCreator")
+  auditLogsActed      AuditLog[]          @relation("AuditActor")
+  auditLogsTargeted   AuditLog[]          @relation("AuditTargetUser")
+
+  @@index([status], map: "idx_users_status")
+  @@index([createdAt], map: "idx_users_created_at")
+  @@map("users")
+}
+
+model Profile {
+  id           String   @id @default(uuid()) @db.Char(36)
+  userId       String   @unique @map("user_id") @db.Char(36)
+  phone        String?  @db.VarChar(50)
+  bio          String?  @db.Text
+  country      String?  @db.VarChar(100)
+  state        String?  @db.VarChar(100)
+  city         String?  @db.VarChar(100)
+  addressLine1 String?  @map("address_line_1") @db.VarChar(191)
+  addressLine2 String?  @map("address_line_2") @db.VarChar(191)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([country, state], map: "idx_profiles_location")
+  @@map("profiles")
+}
+
+model Account {
+  id                String   @id @default(uuid()) @db.Char(36)
+  userId            String   @map("user_id") @db.Char(36)
+  type              String   @db.VarChar(50)
+  provider          String   @db.VarChar(100)
+  providerAccountId String   @map("provider_account_id") @db.VarChar(191)
+  refreshToken      String?  @map("refresh_token") @db.Text
+  accessToken       String?  @map("access_token") @db.Text
+  expiresAt         Int?     @map("expires_at")
+  tokenType         String?  @map("token_type") @db.VarChar(50)
+  scope             String?  @db.Text
+  idToken           String?  @map("id_token") @db.Text
+  sessionState      String?  @map("session_state") @db.VarChar(191)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([provider, providerAccountId], map: "uq_accounts_provider_account")
+  @@index([userId], map: "idx_accounts_user_id")
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Char(36)
+  sessionToken String   @unique @map("session_token") @db.VarChar(191)
+  userId       String   @map("user_id") @db.Char(36)
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId], map: "idx_sessions_user_id")
+  @@index([expiresAt], map: "idx_sessions_expires_at")
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String   @db.VarChar(191)
+  token      String   @db.VarChar(191)
+  expiresAt  DateTime @map("expires_at")
+
+  @@id([identifier, token])
+  @@unique([token], map: "uq_verification_tokens_token")
+  @@index([expiresAt], map: "idx_verification_tokens_expires_at")
+  @@map("verification_tokens")
+}
+
+model Role {
+  id              String           @id @default(uuid()) @db.Char(36)
+  key             String           @unique @db.VarChar(100)
+  name            String           @db.VarChar(100)
+  description     String?          @db.Text
+  sortOrder       Int              @default(100) @map("sort_order")
+  isSystem        Boolean          @default(false) @map("is_system")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@index([sortOrder], map: "idx_roles_sort_order")
+  @@map("roles")
+}
+
+model Permission {
+  id              String           @id @default(uuid()) @db.Char(36)
+  key             String           @unique @db.VarChar(150)
+  resource        String           @db.VarChar(100)
+  action          String           @db.VarChar(100)
+  description     String?          @db.Text
+  createdAt       DateTime         @default(now()) @map("created_at")
+  rolePermissions RolePermission[]
+
+  @@index([resource, action], map: "idx_permissions_resource_action")
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id") @db.Char(36)
+  permissionId String     @map("permission_id") @db.Char(36)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId], map: "idx_role_permissions_permission_id")
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId         String    @map("user_id") @db.Char(36)
+  roleId         String    @map("role_id") @db.Char(36)
+  assignedBy     String?   @map("assigned_by") @db.Char(36)
+  assignedAt     DateTime  @default(now()) @map("assigned_at")
+  expiresAt      DateTime? @map("expires_at")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role           Role      @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  assignedByUser User?     @relation("UserRoleAssignedBy", fields: [assignedBy], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId], map: "idx_user_roles_role_id")
+  @@index([assignedBy], map: "idx_user_roles_assigned_by")
+  @@map("user_roles")
+}
+
+model Project {
+  id            String           @id @default(uuid()) @db.Char(36)
+  creatorId     String           @map("creator_id") @db.Char(36)
+  slug          String           @unique @db.VarChar(191)
+  title         String           @db.VarChar(191)
+  description   String           @db.Text
+  bodyHtml      String?          @map("body_html") @db.LongText
+  goalAmount    Decimal          @map("goal_amount") @db.Decimal(19, 4)
+  currentAmount Decimal          @default(0) @map("current_amount") @db.Decimal(19, 4)
+  currency      String           @default("NGN") @db.Char(3)
+  status        ProjectStatus
+  sector        String?          @db.VarChar(100)
+  country       String?          @db.VarChar(100)
+  state         String?          @db.VarChar(100)
+  coverImageUrl String?          @map("cover_image_url") @db.Text
+  featuredRank  Int?             @map("featured_rank")
+  publishedAt   DateTime?        @map("published_at")
+  completedAt   DateTime?        @map("completed_at")
+  cancelledAt   DateTime?        @map("cancelled_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  creator       User             @relation("ProjectCreator", fields: [creatorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  timeline      ProjectTimeline?
+  votingPeriod  VotingPeriod?
+  pledges       Pledge[]
+  transactions  Transaction[]
+  votes         Vote[]
+  events        Event[]
+
+  @@index([creatorId], map: "idx_projects_creator_id")
+  @@index([status, createdAt], map: "idx_projects_status_created_at")
+  @@index([publishedAt], map: "idx_projects_published_at")
+  @@map("projects")
+}
+
+model ProjectTimeline {
+  id          String         @id @default(uuid()) @db.Char(36)
+  projectId   String         @unique @map("project_id") @db.Char(36)
+  version     Int            @default(1)
+  status      TimelineStatus @default(ACTIVE)
+  createdById String?        @map("created_by_id") @db.Char(36)
+  publishedAt DateTime?      @map("published_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdBy   User?          @relation("TimelineCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  stages      ProjectStage[]
+
+  @@index([status], map: "idx_project_timelines_status")
+  @@map("project_timelines")
+}
+
+model ProjectStage {
+  id               String              @id @default(uuid()) @db.Char(36)
+  timelineId       String              @map("timeline_id") @db.Char(36)
+  title            String              @db.VarChar(191)
+  description      String?             @db.Text
+  stageOrder       Int                 @map("stage_order")
+  plannedCost      Decimal             @map("planned_cost") @db.Decimal(19, 4)
+  actualCost       Decimal?            @map("actual_cost") @db.Decimal(19, 4)
+  status           ProjectStageStatus  @default(PENDING)
+  plannedStartDate DateTime?           @map("planned_start_date")
+  plannedEndDate   DateTime?           @map("planned_end_date")
+  actualStartDate  DateTime?           @map("actual_start_date")
+  actualEndDate    DateTime?           @map("actual_end_date")
+  completionNotes  String?             @map("completion_notes") @db.Text
+  createdById      String?             @map("created_by_id") @db.Char(36)
+  completedById    String?             @map("completed_by_id") @db.Char(36)
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  timeline         ProjectTimeline     @relation(fields: [timelineId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdBy        User?               @relation("StageCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  completedBy      User?               @relation("StageCompletedBy", fields: [completedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  media            ProjectStageMedia[]
+  transactions     Transaction[]
+
+  @@unique([timelineId, stageOrder], map: "uq_project_stages_timeline_order")
+  @@index([status], map: "idx_project_stages_status")
+  @@index([plannedStartDate], map: "idx_project_stages_planned_start_date")
+  @@map("project_stages")
+}
+
+model ProjectStageMedia {
+  id         String                @id @default(uuid()) @db.Char(36)
+  stageId    String                @map("stage_id") @db.Char(36)
+  kind       ProjectStageMediaKind
+  storageKey String                @map("storage_key") @db.VarChar(255)
+  publicUrl  String?               @map("public_url") @db.Text
+  caption    String?               @db.VarChar(191)
+  sortOrder  Int                   @default(0) @map("sort_order")
+  createdAt  DateTime              @default(now()) @map("created_at")
+  stage      ProjectStage          @relation(fields: [stageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([stageId, kind], map: "idx_project_stage_media_stage_kind")
+  @@map("project_stage_media")
+}
+
+model VotingPeriod {
+  id        String   @id @default(uuid()) @db.Char(36)
+  projectId String   @unique @map("project_id") @db.Char(36)
+  startAt   DateTime @map("start_at")
+  endAt     DateTime @map("end_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([startAt, endAt], map: "idx_voting_periods_window")
+  @@map("voting_periods")
+}
+
+model Vote {
+  id                   String     @id @default(uuid()) @db.Char(36)
+  userId               String     @map("user_id") @db.Char(36)
+  projectId            String     @map("project_id") @db.Char(36)
+  choice               VoteChoice
+  eligiblePledgeAmount Decimal?   @map("eligible_pledge_amount") @db.Decimal(19, 4)
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
+  user                 User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  project              Project    @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userId, projectId], map: "uq_votes_user_project")
+  @@index([projectId, choice], map: "idx_votes_project_choice")
+  @@map("votes")
+}
+
+model Pledge {
+  id                 String          @id @default(uuid()) @db.Char(36)
+  userId             String?         @map("user_id") @db.Char(36)
+  projectId          String?         @map("project_id") @db.Char(36)
+  amount             Decimal         @db.Decimal(19, 4)
+  currency           String          @default("NGN") @db.Char(3)
+  pledgeType         PledgeType      @map("pledge_type")
+  recurrenceInterval PledgeInterval? @map("recurrence_interval")
+  paymentDay         PaymentDay?     @map("payment_day")
+  status             PledgeStatus    @default(PENDING)
+  donorEmail         String?         @map("donor_email") @db.VarChar(191)
+  donorName          String?         @map("donor_name") @db.VarChar(191)
+  startedAt          DateTime?       @map("started_at")
+  completedAt        DateTime?       @map("completed_at")
+  cancelledAt        DateTime?       @map("cancelled_at")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  user               User?           @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  project            Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  transactions       Transaction[]
+
+  @@index([userId, status], map: "idx_pledges_user_status")
+  @@index([projectId, status], map: "idx_pledges_project_status")
+  @@index([createdAt], map: "idx_pledges_created_at")
+  @@map("pledges")
+}
+
+model LedgerAccount {
+  id           String                @id @default(uuid()) @db.Char(36)
+  code         String                @unique @db.VarChar(50)
+  name         String                @db.VarChar(191)
+  publicName   String?               @map("public_name") @db.VarChar(191)
+  description  String?               @db.Text
+  category     LedgerAccountCategory
+  isSystem     Boolean               @default(false) @map("is_system")
+  isActive     Boolean               @default(true) @map("is_active")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  transactions Transaction[]
+
+  @@index([category, isActive], map: "idx_ledger_accounts_category_active")
+  @@map("ledger_accounts")
+}
+
+model Transaction {
+  id                String               @id @default(uuid()) @db.Char(36)
+  userId            String?              @map("user_id") @db.Char(36)
+  pledgeId          String?              @map("pledge_id") @db.Char(36)
+  projectId         String?              @map("project_id") @db.Char(36)
+  projectStageId    String?              @map("project_stage_id") @db.Char(36)
+  ledgerAccountId   String?              @map("ledger_account_id") @db.Char(36)
+  direction         TransactionDirection
+  kind              TransactionKind
+  amount            Decimal              @db.Decimal(19, 4)
+  currency          String               @default("NGN") @db.Char(3)
+  status            TransactionStatus
+  paymentMethod     String?              @map("payment_method") @db.VarChar(100)
+  paymentProcessor  String?              @map("payment_processor") @db.VarChar(100)
+  paymentReference  String?              @unique(map: "uq_transactions_payment_reference") @map("payment_reference") @db.VarChar(191)
+  externalReference String?              @map("external_reference") @db.VarChar(191)
+  description       String?              @db.Text
+  metadata          Json?
+  paidAt            DateTime?            @map("paid_at")
+  postedAt          DateTime?            @map("posted_at")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  user              User?                @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  pledge            Pledge?              @relation(fields: [pledgeId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  project           Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  projectStage      ProjectStage?        @relation(fields: [projectStageId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  ledgerAccount     LedgerAccount?       @relation(fields: [ledgerAccountId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([userId, status], map: "idx_transactions_user_status")
+  @@index([projectId, kind], map: "idx_transactions_project_kind")
+  @@index([projectStageId], map: "idx_transactions_project_stage_id")
+  @@index([ledgerAccountId], map: "idx_transactions_ledger_account_id")
+  @@index([postedAt], map: "idx_transactions_posted_at")
+  @@index([kind, status], map: "idx_transactions_kind_status")
+  @@map("transactions")
+}
+
+model State {
+  id        Int                   @id @default(autoincrement())
+  name      String                @unique @db.VarChar(100)
+  code      String?               @unique @db.VarChar(10)
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt @map("updated_at")
+  lgas      LocalGovernmentArea[]
+  cases     Case[]
+
+  @@map("states")
+}
+
+model LocalGovernmentArea {
+  id        Int      @id @default(autoincrement())
+  stateId   Int      @map("state_id")
+  name      String   @db.VarChar(120)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  state     State    @relation(fields: [stateId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  cases     Case[]
+
+  @@unique([stateId, name], map: "uq_lgas_state_name")
+  @@index([stateId], map: "idx_lgas_state_id")
+  @@map("lgas")
+}
+
+model Case {
+  id              String              @id @default(uuid()) @db.Char(36)
+  caseReferenceId String              @unique @map("case_reference_id") @db.VarChar(50)
+  reporterUserId  String?             @map("reporter_user_id") @db.Char(36)
+  assigneeUserId  String?             @map("assignee_user_id") @db.Char(36)
+  reviewerUserId  String?             @map("reviewer_user_id") @db.Char(36)
+  fullName        String              @map("full_name") @db.VarChar(191)
+  phone           String              @db.VarChar(50)
+  email           String?             @db.VarChar(191)
+  stateId         Int                 @map("state_id")
+  lgaId           Int                 @map("lga_id")
+  town            String              @db.VarChar(191)
+  reportingFor    ReportingFor        @map("reporting_for")
+  beneficiaryName String?             @map("beneficiary_name") @db.VarChar(191)
+  relationship    String?             @db.VarChar(191)
+  helpType        HelpType            @map("help_type")
+  description     String              @db.Text
+  infoConfirmed   Boolean             @default(false) @map("info_confirmed")
+  contactConsent  Boolean             @default(false) @map("contact_consent")
+  updatesConsent  Boolean             @default(false) @map("updates_consent")
+  status          CaseStatus          @default(PENDING)
+  decisionReason  String?             @map("decision_reason") @db.Text
+  submittedAt     DateTime?           @map("submitted_at")
+  reviewedAt      DateTime?           @map("reviewed_at")
+  completedAt     DateTime?           @map("completed_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  reporter        User?               @relation("CaseReporter", fields: [reporterUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  assignee        User?               @relation("CaseAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  reviewer        User?               @relation("CaseReviewer", fields: [reviewerUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  state           State               @relation(fields: [stateId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  lga             LocalGovernmentArea @relation(fields: [lgaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  files           CaseFile[]
+  notes           CaseNote[]
+
+  @@index([status, createdAt], map: "idx_cases_status_created_at")
+  @@index([stateId, lgaId], map: "idx_cases_location")
+  @@index([reporterUserId], map: "idx_cases_reporter_user_id")
+  @@map("cases")
+}
+
+model CaseFile {
+  id               String       @id @default(uuid()) @db.Char(36)
+  caseId           String       @map("case_id") @db.Char(36)
+  uploadedByUserId String?      @map("uploaded_by_user_id") @db.Char(36)
+  kind             CaseFileKind @default(SUPPORTING_DOCUMENT)
+  storageKey       String       @map("storage_key") @db.VarChar(255)
+  fileUrl          String?      @map("file_url") @db.Text
+  fileName         String       @map("file_name") @db.VarChar(191)
+  fileSize         Int          @map("file_size")
+  mimeType         String       @map("mime_type") @db.VarChar(100)
+  checksum         String?      @db.VarChar(128)
+  createdAt        DateTime     @default(now()) @map("created_at")
+  case             Case         @relation(fields: [caseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  uploadedBy       User?        @relation("CaseFileUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([caseId], map: "idx_case_files_case_id")
+  @@map("case_files")
+}
+
+model CaseNote {
+  id           String   @id @default(uuid()) @db.Char(36)
+  caseId       String   @map("case_id") @db.Char(36)
+  authorUserId String   @map("author_user_id") @db.Char(36)
+  note         String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  case         Case     @relation(fields: [caseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  author       User     @relation(fields: [authorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([caseId, createdAt], map: "idx_case_notes_case_created_at")
+  @@map("case_notes")
+}
+
+model Setting {
+  id              String               @id @default(uuid()) @db.Char(36)
+  key             String               @unique @db.VarChar(191)
+  displayName     String               @map("display_name") @db.VarChar(191)
+  description     String?              @db.Text
+  category        String               @db.VarChar(100)
+  subcategory     String?              @db.VarChar(100)
+  value           Json
+  defaultValue    Json?                @map("default_value")
+  dataType        SettingDataType      @map("data_type")
+  validationRules Json?                @map("validation_rules")
+  accessLevel     SettingAccessLevel   @default(PROTECTED) @map("access_level")
+  cacheStrategy   SettingCacheStrategy @default(DYNAMIC) @map("cache_strategy")
+  cacheTtlSeconds Int                  @default(300) @map("cache_ttl_seconds")
+  isEncrypted     Boolean              @default(false) @map("is_encrypted")
+  isActive        Boolean              @default(true) @map("is_active")
+  sortOrder       Int                  @default(0) @map("sort_order")
+  createdById     String?              @map("created_by_id") @db.Char(36)
+  updatedById     String?              @map("updated_by_id") @db.Char(36)
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  createdBy       User?                @relation("SettingsCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  updatedBy       User?                @relation("SettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([category, subcategory], map: "idx_settings_category_subcategory")
+  @@index([accessLevel, isActive], map: "idx_settings_access_active")
+  @@map("settings")
+}
+
+model Event {
+  id                String      @id @default(uuid()) @db.Char(36)
+  creatorId         String?     @map("creator_id") @db.Char(36)
+  projectId         String?     @map("project_id") @db.Char(36)
+  title             String      @db.VarChar(191)
+  description       String?     @db.Text
+  eventType         EventType   @default(OTHER) @map("event_type")
+  status            EventStatus @default(UPCOMING)
+  startAt           DateTime    @map("start_at")
+  endAt             DateTime?   @map("end_at")
+  timezone          String?     @db.VarChar(64)
+  location          String?     @db.VarChar(191)
+  recordingUrl      String?     @map("recording_url") @db.Text
+  recordingPassword String?     @map("recording_password") @db.VarChar(191)
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  creator           User?       @relation("EventCreator", fields: [creatorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  project           Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([projectId, startAt], map: "idx_events_project_start_at")
+  @@index([status, startAt], map: "idx_events_status_start_at")
+  @@map("events")
+}
+
+model AuditLog {
+  id           String         @id @default(uuid()) @db.Char(36)
+  actorUserId  String?        @map("actor_user_id") @db.Char(36)
+  actorType    AuditActorType @default(USER) @map("actor_type")
+  targetUserId String?        @map("target_user_id") @db.Char(36)
+  entityType   String         @map("entity_type") @db.VarChar(100)
+  entityId     String?        @map("entity_id") @db.VarChar(100)
+  action       String         @db.VarChar(100)
+  summary      String?        @db.Text
+  oldValues    Json?          @map("old_values")
+  newValues    Json?          @map("new_values")
+  metadata     Json?
+  ipAddress    String?        @map("ip_address") @db.VarChar(64)
+  userAgent    String?        @map("user_agent") @db.Text
+  createdAt    DateTime       @default(now()) @map("created_at")
+  actorUser    User?          @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  targetUser   User?          @relation("AuditTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@index([actorUserId, createdAt], map: "idx_audit_logs_actor_created_at")
+  @@index([createdAt], map: "idx_audit_logs_created_at")
+  @@map("audit_logs")
+}
