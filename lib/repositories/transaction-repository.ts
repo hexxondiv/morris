@@ -177,6 +177,28 @@ export async function listTransactionsForExport(
   });
 }
 
+export function parseTransactionStatusFromApi(
+  raw: string
+): TransactionStatus | undefined {
+  const key = raw.trim().toUpperCase().replace(/-/g, "_");
+  return Object.values(TransactionStatus).includes(key as TransactionStatus)
+    ? (key as TransactionStatus)
+    : undefined;
+}
+
+export async function updateTransactionStatusById(
+  id: string,
+  status: TransactionStatus
+) {
+  await prisma.$transaction(async (tx) => {
+    await tx.transaction.update({
+      where: { id },
+      data: { status },
+    });
+  });
+  return getTransactionDetailById(id);
+}
+
 export async function getTransactionDetailById(id: string) {
   const t = await prisma.transaction.findUnique({
     where: { id },

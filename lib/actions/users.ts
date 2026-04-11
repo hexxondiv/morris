@@ -1,34 +1,81 @@
 "use server";
 
-import { auth, clerkClient, createClerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { getUserRoleFromClerk, syncRole } from "@/lib/actions";
-import { User as ClerkUser } from "@clerk/nextjs/server";
 import { getSession } from "@/lib/auth/server";
+import { getPrimaryRole, normalizeRole } from "@/lib/auth/roles";
 import { prisma } from "@/lib/db/prisma";
+import type { Role } from "@/types/database.types";
+import { UserStatus } from "@prisma/client";
+
+const ASSIGNABLE_ROLES: Role[] = ["admin", "moderator", "editor", "user"];
+
+async function requireAdminActor() {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    return { ok: false as const, error: "Unauthorized" };
+  }
+  const actor = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: {
+      userRoles: { include: { role: { select: { key: true } } } },
+    },
+  });
+  if (!actor) {
+    return { ok: false as const, error: "Unauthorized" };
+  }
+  const actorRole: Role = getPrimaryRole(actor.userRoles);
+  if (actorRole !== "admin" && actorRole !== "super_admin") {
+    return { ok: false as const, error: "Admin access required" };
+  }
+  return { ok: true as const, actor, actorRole };
+}
 
 export async function updateUserRole(userId: string, role: string) {
-  const { userId: currentUserId } = await auth();
-  if (!currentUserId) {
-    return { success: false, error: "Unauthorized" };
+  const gate = await requireAdminActor();
+  if (!gate.ok) {
+    return { success: false, error: gate.error };
   }
 
-  const userRole = await getUserRoleFromClerk(currentUserId);
-  if (userRole !== "admin") {
-    return { success: false, error: "Admin access required" };
-  }
-
-  const validRoles = ["admin", "moderator", "editor", "user"];
-  if (!validRoles.includes(role)) {
+  const normalized = normalizeRole(typeof role === "string" ? role : "");
+  if (!ASSIGNABLE_ROLES.includes(normalized)) {
     return { success: false, error: "Invalid role" };
   }
 
-  const clerk = await clerkClient();
+  const targetUser = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      userRoles: { include: { role: { select: { key: true } } } },
+    },
+  });
+
+  if (!targetUser) {
+    return { success: false, error: "User not found" };
+  }
+
+  const targetPrimary = getPrimaryRole(targetUser.userRoles);
+  if (targetPrimary === "super_admin" && gate.actorRole !== "super_admin") {
+    return { success: false, error: "Forbidden" };
+  }
+
+  const roleRecord = await prisma.role.findUnique({ where: { key: normalized } });
+  if (!roleRecord) {
+    return {
+      success: false,
+      error: "Role is not provisioned in the database (run seed / migrations).",
+    };
+  }
+
   try {
-    await clerk.users.updateUserMetadata(userId, {
-      publicMetadata: { role },
-    });
-    await syncRole({ id: userId, publicMetadata: { role } });
+    await prisma.$transaction([
+      prisma.userRole.deleteMany({ where: { userId } }),
+      prisma.userRole.create({
+        data: {
+          userId,
+          roleId: roleRecord.id,
+          assignedBy: gate.actor.id,
+        },
+      }),
+    ]);
     revalidatePath("/users");
     return { success: true };
   } catch (error) {
@@ -38,19 +85,30 @@ export async function updateUserRole(userId: string, role: string) {
 }
 
 export async function deactivateUser(userId: string) {
-  const { userId: currentUserId } = await auth();
-  if (!currentUserId) {
-    return { success: false, error: "Unauthorized" };
+  const gate = await requireAdminActor();
+  if (!gate.ok) {
+    return { success: false, error: gate.error };
   }
 
-  const userRole = await getUserRoleFromClerk(currentUserId);
-  if (userRole !== "admin") {
-    return { success: false, error: "Admin access required" };
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      userRoles: { include: { role: { select: { key: true } } } },
+    },
+  });
+  if (!target) {
+    return { success: false, error: "User not found" };
+  }
+  const targetPrimary = getPrimaryRole(target.userRoles);
+  if (targetPrimary === "super_admin") {
+    return { success: false, error: "Cannot deactivate a super admin" };
   }
 
-  const clerk = await clerkClient();
   try {
-    await clerk.users.deleteUser(userId);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { status: UserStatus.DEACTIVATED },
+    });
     revalidatePath("/users");
     return { success: true };
   } catch (error) {
@@ -60,49 +118,58 @@ export async function deactivateUser(userId: string) {
 }
 
 export async function deleteAllUsers() {
-  const clerk = await clerkClient();
-  const response = await clerk.users.getUserList({ limit: 100 }); // up to 100 per page
-  console.log(`Found ${response.data.length} users.`);
-
-  for (const user of response.data) {
-    await clerk.users.deleteUser(user.id);
-    console.log(`Deleted user: ${user.id}`);
+  if (process.env.NODE_ENV !== "development") {
+    throw new Error("deleteAllUsers is only available in development");
   }
-
-  console.log("Done.");
+  await prisma.user.deleteMany({
+    where: {
+      NOT: {
+        userRoles: {
+          some: { role: { key: "super_admin" } } },
+      },
+    },
+  });
 }
 
 export async function updateUserDetails(
   userId: string,
   data: { firstName: string; lastName: string; email: string; role: string }
 ) {
-  const { userId: currentUserId } = await auth();
-  if (!currentUserId) {
-    return { success: false, error: "Unauthorized" };
+  const gate = await requireAdminActor();
+  if (!gate.ok) {
+    return { success: false, error: gate.error };
   }
 
-  const userRole = await getUserRoleFromClerk(currentUserId);
-  if (userRole !== "admin") {
-    return { success: false, error: "Admin access required" };
+  const normalized = normalizeRole(data.role);
+  if (!ASSIGNABLE_ROLES.includes(normalized)) {
+    return { success: false, error: "Invalid role" };
   }
-  
-  const clerk = await clerkClient();
+
+  const roleRecord = await prisma.role.findUnique({ where: { key: normalized } });
+  if (!roleRecord) {
+    return { success: false, error: "Role is not provisioned in the database." };
+  }
+
   try {
-    const validRoles = ["admin", "moderator", "editor", "user"];
-    if (!validRoles.includes(data.role)) {
-      return { success: false, error: "Invalid role" };
-    }
-    // Update user metadata for role
-    await clerk.users.updateUserMetadata(userId, {
-      publicMetadata: { role: data.role },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          displayName: [data.firstName, data.lastName].filter(Boolean).join(" ") || null,
+        },
+      });
+      await tx.userRole.deleteMany({ where: { userId } });
+      await tx.userRole.create({
+        data: {
+          userId,
+          roleId: roleRecord.id,
+          assignedBy: gate.actor.id,
+        },
+      });
     });
-
-    // Update user details (firstName, lastName)
-    await clerk.users.updateUser(userId, {
-      firstName: data.firstName,
-      lastName: data.lastName,
-    });
-
     return { success: true };
   } catch (error) {
     console.error("Error updating user details:", error);
@@ -110,46 +177,57 @@ export async function updateUserDetails(
   }
 }
 
-  export async function getUser(): Promise<ClerkUser | null> {
-    try {
-      const { userId } = await auth();
-      
-      if (!userId) {
-        return null;
-      }
+export type SessionUserSummary = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  imageUrl: string | null;
+};
 
-      const clerk = await clerkClient();
-      const user = await clerk.users.getUser(userId);
-      
-      return user;
-    } catch (error) {
-      console.error("Error fetching user:", error);
+export async function getUser(): Promise<SessionUserSummary | null> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.id) {
       return null;
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+      },
+    });
+
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      imageUrl: user.avatarUrl,
+    };
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return null;
   }
+}
 
 export async function getUsers(page: number = 1, limit: number = 10) {
   const offset = (page - 1) * limit;
-  const clerk = await clerkClient();
-  const response = await clerk.users.getUserList({ limit, offset });
-  
-  const users = response.data.map((user: ClerkUser) => ({
-    id: user.id,
-    email: user.emailAddresses[0]?.emailAddress || "No email",
-    role: (user.publicMetadata?.role as string) || "user",
-    createdAt: user.createdAt,
-    firstName: user.firstName || "",
-    lastName: user.lastName || "",
-  }));
-
-  return users;
+  const { listUsersForAdmin } = await import("@/lib/repositories/user-repository");
+  return listUsersForAdmin(offset, limit, "");
 }
 
 export async function getTotalUserCount(query: string) {
   const { countUsersForAdmin } = await import("@/lib/repositories/user-repository");
   return countUsersForAdmin(query);
 }
-
 
 export async function insertDevProfile(userId: string) {
   if (process.env.NODE_ENV !== "development") {
@@ -181,7 +259,6 @@ export async function insertDevProfile(userId: string) {
 
   return { id: userId, email, first_name: "Dev", last_name: "User" };
 }
-
 
 export async function saveProfile({
   first_name,
@@ -219,16 +296,15 @@ export async function saveProfile({
       create: { userId: session.user.id },
     });
 
-    return { 
+    return {
       success: true,
-      data: { first_name, last_name, email, role, avatar_url }
+      data: { first_name, last_name, email, role, avatar_url },
     };
-
   } catch (error) {
     console.error("Error saving profile:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Failed to save profile" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save profile",
     };
   }
 }

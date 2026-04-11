@@ -1,84 +1,23 @@
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, ArrowRight, Heart } from "lucide-react";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { Info } from "lucide-react";
 import { ProjectVoteSection } from "@/components/components/project-vote-section";
 import { canUserVote } from "@/lib/actions";
 import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { formatDateTime, toNaira } from "@/lib/utils";
+import { toNaira } from "@/lib/utils";
 import DonateButton from "@/components/components/donate-button";
-
-interface VotingProject {
-  id: string;
-  title: string;
-  description: string;
-  goal_amount: number;
-  cover_image: string | null;
-  vote_count: number;
-  oppose_count: number;
-  has_voted: boolean;
-  current_vote: boolean | null;
-  start_date: string | null;
-  end_date: string | null;
-}
-
-async function fetchVotingProjects(userId: string): Promise<VotingProject[]> {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("projects")
-      .select(
-        `
-        id,
-        title,
-        description,
-        goal_amount,
-        cover_image,
-        votes(vote, user_id),
-        voting_periods!projects_voting_periods_fkey(start_date, end_date)
-      `
-      )
-      .eq("status", "voting");
-    
-    if (error) throw new Error(error.message);
-
-    const projects: VotingProject[] = data.map((item) => {
-      const userVote = item.votes?.find((v: any) => v.user_id === userId);
-
-      return {
-        id: item.id,
-        title: item.title,
-        description: item.description || "No description available.",
-        goal_amount: item.goal_amount || 0,
-        cover_image: item.cover_image || null,
-        vote_count: item.votes?.filter((v: any) => v.vote === true).length || 0,
-        oppose_count:
-          item.votes?.filter((v: any) => v.vote === false).length || 0,
-        has_voted: !!userVote,
-        current_vote: userVote ? userVote.vote : null,
-        // Cast to any to bypass incorrect TypeScript inference
-        start_date: (item.voting_periods as any)?.start_date || null,
-        end_date: (item.voting_periods as any)?.end_date || null,
-      };
-    });
-
-    return projects;
-  } catch (error) {
-    console.error("Error fetching voting projects:", error);
-    return [];
-  }
-}
+import { requireAuth } from "@/lib/auth/server";
+import { listVotingDashboardProjects } from "@/lib/services/voting-service";
 
 export default async function VotingPage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
+  const auth = await requireAuth();
+  if (!auth.authorized) redirect("/sign-in");
 
+  const userId = auth.userId;
   const { canVote, message } = await canUserVote(userId);
-  const projects = await fetchVotingProjects(userId);
+  const projects = await listVotingDashboardProjects(userId);
 
   return (
     <div className="min-h-screen bg-theme-50">

@@ -2,7 +2,7 @@ export interface TimelineStage {
   id: string;
   project_id: string;
   title: string;
-  description: string | null;
+  description?: string | null;
   planned_cost: number;
   actual_cost: number | null;
   stage_order: number;
@@ -32,7 +32,8 @@ export interface CreateTimelineStageData {
 }
 
 export interface CompleteStageData {
-  actual_cost?: number;
+  /** API routes may send numeric strings from form JSON. */
+  actual_cost?: string | number;
   completion_notes?: string;
   completion_media_urls?: string[];
   actual_end_date?: string;

@@ -1,11 +1,13 @@
 "use server";
 
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import type { Project } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { TransactionStatus } from "@prisma/client";
 import { Role } from "@/types/database.types";
 import { supabaseAdmin } from "../supabase-admin";
+import { getSession } from "@/lib/auth/server";
+import { castVote } from "@/lib/services/voting-service";
 import {
   apiStatusesToPrisma,
   projectStatusToApi,
@@ -163,12 +165,10 @@ async function canUserVote(userId: string | null): Promise<CanUserVoteResult> {
   }
 }
 
-/**
- * Workstream 06 boundary: voting mutations still use Supabase until votes are fully migrated.
- */
 async function saveVote(projectId: string, vote: boolean): Promise<VoteResult> {
   try {
-    const { userId } = await auth();
+    const session = await getSession();
+    const userId = session?.user?.id;
     if (!userId) {
       return {
         success: false,
@@ -177,82 +177,17 @@ async function saveVote(projectId: string, vote: boolean): Promise<VoteResult> {
       };
     }
 
-    const now = new Date().toISOString();
-
-    const { data: votingPeriod, error: periodError } = await supabaseAdmin
-      .from("voting_periods")
-      .select("start_date, end_date")
-      .eq("project_id", projectId)
-      .single();
-
-    if (periodError || !votingPeriod) {
-      console.error("Error fetching voting period:", periodError);
+    const result = await castVote({ userId, projectId, support: vote });
+    if (!result.success) {
       return {
         success: false,
         previousVote: null,
-        error: "No valid voting period found for this project",
+        error: result.error,
       };
     }
-
-    if (now < votingPeriod.start_date || now > votingPeriod.end_date) {
-      return {
-        success: false,
-        previousVote: null,
-        error: "Voting is not open for this project",
-      };
-    }
-
-    const { data: existingVote, error: fetchError } = await supabaseAdmin
-      .from("votes")
-      .select("vote")
-      .eq("project_id", projectId)
-      .eq("user_id", userId)
-      .single();
-
-    if (fetchError && fetchError.code !== "PGRST116") {
-      console.error("Error fetching existing vote:", fetchError);
-      return {
-        success: false,
-        previousVote: null,
-        error: "Failed to check existing vote",
-      };
-    }
-
-    const previousVote: boolean | null = existingVote?.vote ?? null;
-
-    if (existingVote) {
-      const { error: updateError } = await supabaseAdmin
-        .from("votes")
-        .update({ vote, updated_at: new Date().toISOString() })
-        .eq("project_id", projectId)
-        .eq("user_id", userId);
-
-      if (updateError) {
-        console.error("Error updating vote:", updateError);
-        return {
-          success: false,
-          previousVote,
-          error: "Failed to update vote",
-        };
-      }
-    } else {
-      const { error: insertError } = await supabaseAdmin
-        .from("votes")
-        .insert({ project_id: projectId, user_id: userId, vote });
-
-      if (insertError) {
-        console.error("Error inserting vote:", insertError);
-        return {
-          success: false,
-          previousVote: null,
-          error: "Failed to submit vote",
-        };
-      }
-    }
-
     return {
       success: true,
-      previousVote,
+      previousVote: result.previousVote,
     };
   } catch (error) {
     console.error("Error saving vote:", error);

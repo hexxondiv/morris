@@ -1,70 +1,38 @@
-import { getUserRoleFromClerk } from "@/lib/actions";
-import { supabaseAdmin } from "@/lib/supabase-admin";
-import { isAuthorized } from "@/lib/utils";
-import { auth } from "@clerk/nextjs/server";
+import { requireRole } from "@/lib/auth/server";
 import { NextRequest, NextResponse } from "next/server";
-
+import {
+  deleteTimelineStage,
+  updateTimelineStage,
+} from "@/lib/services/timeline-service";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string; stageId: string }> }
 ) {
+  const auth = await requireRole("moderator");
+  if (!auth.authorized) return auth.response;
+
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin permissions
-    const role = await getUserRoleFromClerk(userId);
-    if (!isAuthorized(role, "moderator")) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
-
-    // Await the params Promise
     const { slug, stageId } = await params;
     const body = await request.json();
 
-    // Get project by slug
-    const { data: project, error: projectError } = await supabaseAdmin
-      .from("projects")
-      .select("id")
-      .eq("slug", slug)
-      .single();
+    const result = await updateTimelineStage(slug, stageId, {
+      title: body.title,
+      description: body.description,
+      planned_cost: parseFloat(body.planned_cost) || 0,
+      planned_start_date: body.planned_start_date || undefined,
+      planned_end_date: body.planned_end_date || undefined,
+      media_urls: body.media_urls || [],
+    });
 
-    if (projectError || !project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    // Update stage
-    const { data: updatedStage, error: updateError } = await supabaseAdmin
-      .from("project_timelines")
-      .update({
-        title: body.title,
-        description: body.description,
-        planned_cost: parseFloat(body.planned_cost) || 0,
-        planned_start_date: body.planned_start_date || null,
-        planned_end_date: body.planned_end_date || null,
-        media_urls: body.media_urls || [],
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", stageId)
-      .eq("project_id", project.id)
-      .select("*")
-      .single();
-
-    if (updateError) {
-      console.error("Stage update error:", updateError);
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Failed to update stage" },
-        { status: 500 }
+        { error: result.error },
+        { status: result.error === "Project not found" ? 404 : 500 }
       );
     }
 
-    return NextResponse.json({ stage: updatedStage });
+    return NextResponse.json({ stage: result.stage });
   } catch (error) {
     console.error("API error:", error);
     return NextResponse.json(
@@ -75,92 +43,24 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ slug: string; stageId: string }> }
 ) {
+  const auth = await requireRole("moderator");
+  if (!auth.authorized) return auth.response;
+
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin permissions
-    const role = await getUserRoleFromClerk(userId);
-    if (!isAuthorized(role, "moderator")) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
-
-    // Await the params Promise
     const { slug, stageId } = await params;
 
-    // Get project by slug
-    const { data: project, error: projectError } = await supabaseAdmin
-      .from("projects")
-      .select("id")
-      .eq("slug", slug)
-      .single();
-
-    if (projectError || !project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    // Check if stage exists and is not completed
-    const { data: stage, error: stageError } = await supabaseAdmin
-      .from("project_timelines")
-      .select("status, stage_order")
-      .eq("id", stageId)
-      .eq("project_id", project.id)
-      .single();
-
-    if (stageError || !stage) {
-      return NextResponse.json(
-        { error: "Timeline stage not found" },
-        { status: 404 }
-      );
-    }
-
-    if (stage.status === "completed") {
-      return NextResponse.json(
-        {
-          error: "Cannot delete completed stages",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Delete stage
-    const { error: deleteError } = await supabaseAdmin
-      .from("project_timelines")
-      .delete()
-      .eq("id", stageId)
-      .eq("project_id", project.id);
-
-    if (deleteError) {
-      console.error("Stage delete error:", deleteError);
-      return NextResponse.json(
-        { error: "Failed to delete stage" },
-        { status: 500 }
-      );
-    }
-
-    // Reorder remaining stages
-    const { data: remainingStages, error: remainingError } = await supabaseAdmin
-      .from("project_timelines")
-      .select("id")
-      .eq("project_id", project.id)
-      .gt("stage_order", stage.stage_order)
-      .order("stage_order", { ascending: true });
-
-    if (!remainingError && remainingStages) {
-      for (let i = 0; i < remainingStages.length; i++) {
-        await supabaseAdmin
-          .from("project_timelines")
-          .update({ stage_order: stage.stage_order + i })
-          .eq("id", remainingStages[i].id);
-      }
+    const result = await deleteTimelineStage(slug, stageId);
+    if (!result.success) {
+      const status =
+        result.error === "Project not found" || result.error === "Timeline stage not found"
+          ? 404
+          : result.error === "Cannot delete completed stages"
+            ? 400
+            : 500;
+      return NextResponse.json({ error: result.error }, { status });
     }
 
     return NextResponse.json({ message: "Stage deleted successfully" });

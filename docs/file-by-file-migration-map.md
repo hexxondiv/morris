@@ -38,7 +38,7 @@ For each file, it identifies:
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
 | `lib/supabase.ts` | Supabase | Client DB access | `lib/db`, repositories, or API-backed client hooks | `05`, `09` | In Progress | Client bundle still imported by workstream `06/07`-deferred surfaces (e.g. `project-form.tsx`) until those paths migrate. |
-| `lib/supabase-admin.ts` | Supabase, Clerk | Server DB access and auth bridge | ORM client plus internal authz helpers | `04`, `05`, `09` | In Progress | Read paths in scope for `05` moved to Prisma; `ensureAuthorized`, Clerk bridge, and `saveVote` sync still use the admin client. |
+| `lib/supabase-admin.ts` | Supabase, Clerk | Server DB access and auth bridge | ORM client plus internal authz helpers | `04`, `05`, `09` | In Progress | `ensureAuthorized` / Clerk bridge + `syncRole(s)` legacy profile writes remain; voting and core domain writes no longer use this client for migrated flows. |
 | `lib/supabase-provider.tsx` | Supabase, Clerk | Client provider for user DB state | Remove or replace with internal state/provider | `03`, `05`, `09` | Not Started |
 | `app/store.ts` | Supabase, Clerk | Client state typing for profile/session | Internal auth/user state model | `03`, `05` | Not Started |
 
@@ -51,7 +51,7 @@ For each file, it identifies:
 | `app/(dashboard)/dashboard/page.tsx` | Clerk | Dashboard user flow | Internal session helpers | `03` | Not Started |
 | `app/(dashboard)/dashboard/account/page.tsx` | Clerk | Account/profile page | Internal user profile model | `03`, `06` | Not Started |
 | `app/(dashboard)/dashboard/events/page.tsx` | Clerk | Dashboard events/user state | Internal session model | `03`, `05` | Not Started |
-| `app/(dashboard)/dashboard/voting/page.tsx` | Clerk, Supabase | Voting dashboard reads | Internal auth + ORM reads | `04`, `05`, `06` | `Deferred` | **Deferred to 06:** page still uses `supabaseAdmin` for voting data; migrate with voting read service when writes move off Supabase. |
+| `app/(dashboard)/dashboard/voting/page.tsx` | Clerk, Supabase | Voting dashboard reads | `requireAuth` + `voting-service` (Prisma) | `04`, `05`, `06` | `Done` | Reads voting projects via `listVotingDashboardProjects`; auth from `@/lib/auth/server`. |
 | `app/(dashboard)/admin/users/page.tsx` | Clerk | Admin user management | Internal users repository and admin UI | `05`, `06` | Not Started |
 | `app/(dashboard)/admin/cases/case-actions.tsx` | Clerk | User-aware admin case actions | Internal session and role model | `04`, `06` | Not Started |
 | `app/(public)/pledge/page.tsx` | Clerk | Auth-aware public pledge flow | Internal auth/session handling | `03`, `06` | Not Started |
@@ -82,25 +82,25 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/projects/[slug]/timeline/route.ts` | Clerk, Supabase | Timeline CRUD | Internal authz + transactional services | `04`, `05`, `06` | Not Started |
-| `app/api/projects/[slug]/timeline/[stageId]/route.ts` | Clerk, Supabase | Stage update/delete | Internal authz + transactional services | `04`, `06` | Not Started |
-| `app/api/projects/[slug]/timeline/[stageId]/start/route.ts` | Clerk, Supabase | Stage start mutation | Internal authz + transactional service | `04`, `06` | Not Started |
-| `app/api/projects/[slug]/timeline/[stageId]/complete/route.ts` | Clerk, Supabase | Stage completion mutation | Internal authz + transactional service | `04`, `06` | Not Started |
-| `lib/actions/timeline.ts` | Clerk, Supabase | Timeline domain logic | Internal service layer | `04`, `05`, `06` | Not Started |
+| `app/api/projects/[slug]/timeline/route.ts` | Clerk, Supabase | Timeline CRUD | `requireRole` + `timeline-service` | `04`, `05`, `06` | `Done` | GET/POST/PUT thin handlers; writes use Prisma `$transaction` where multi-step. |
+| `app/api/projects/[slug]/timeline/[stageId]/route.ts` | Clerk, Supabase | Stage update/delete | `requireRole` + `timeline-service` | `04`, `06` | `Done` | |
+| `app/api/projects/[slug]/timeline/[stageId]/start/route.ts` | Clerk, Supabase | Stage start mutation | `requireAuth` + `startTimelineStage` | `04`, `06` | `Done` | |
+| `app/api/projects/[slug]/timeline/[stageId]/complete/route.ts` | Clerk, Supabase | Stage completion mutation | `requireAuth` + `completeTimelineStage` | `04`, `06` | `Done` | Stage + project totals in one `$transaction`. |
+| `lib/actions/timeline.ts` | Clerk, Supabase | Timeline domain logic | `timeline-service` + session RBAC | `04`, `05`, `06` | `Done` | Server actions call shared service; moderator gate via Prisma `UserRole`. |
 
 ## Pledges, Transactions, Voting, and Ledger
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/pledges/route.ts` | Clerk, Supabase | Pledge reads and writes | Internal auth + repositories + transactional services | `04`, `05`, `06` | Not Started |
+| `app/api/pledges/route.ts` | Clerk, Supabase | Pledge reads and writes | `requireRole` / `requireAuth` + `pledge-repository` + `pledge-service` | `04`, `05`, `06` | `Done` | Admin GET uses `listPledgesForAdmin`; POST uses `createPendingPledge` (Prisma). |
 | `app/api/pledges/export/route.ts` | Clerk, Supabase | Pledge export | Internal authz + ORM query/export | `04`, `05` | Done | `pledge-repository` + `requireRole`. |
-| `lib/actions/pledge.ts` | Clerk, Supabase | Pledge business logic | Transactional service layer | `04`, `06` | Not Started |
+| `lib/actions/pledge.ts` | Clerk, Supabase | Pledge business logic | `pledge-service` + `pledge-repository` + Prisma | `04`, `06` | `Done` | `markPledgeAsCompleted` uses `prisma.$transaction`. |
 | `app/api/transactions/route.ts` | Clerk, Supabase | Transaction listing | Internal authz + ORM query | `04`, `05` | Done | `transaction-repository` + `requireRole`. |
-| `app/api/transactions/[id]/route.ts` | Clerk, Supabase | Transaction detail | Internal authz + ORM query | `04`, `05` | Deferred | **PATCH only** today; still uses Supabase for status updates until `06` (`transaction-repository` write helpers). |
-| `app/api/transactions/create/route.ts` | Clerk, Supabase | Transaction creation | Internal authz + transactional service | `04`, `06` | Not Started |
+| `app/api/transactions/[id]/route.ts` | Clerk, Supabase | Transaction detail | `requireRole` + `updateTransactionStatusById` (Prisma `$transaction`) | `04`, `05`, `06` | `Done` | PATCH status updates via `transaction-repository` helpers. |
+| `app/api/transactions/create/route.ts` | Clerk, Supabase | Transaction creation | `requireAuth` + `transaction-write-service` (`createLedgerTransaction`) | `04`, `06` | `Done` | Prisma create wrapped in `$transaction` for extension point / consistency with other writes. |
 | `app/api/transactions/export/route.ts` | Clerk, Supabase | Transaction export | Internal authz + ORM query/export | `04`, `05` | Done | `transaction-repository` export list. |
 | `lib/actions/transaction.ts` | Supabase | Transaction query logic | Internal repository/service layer | `05`, `06` | Done | Server actions call `transaction-repository`. |
-| `app/api/voting/route.ts` | Supabase | Voting data reads/writes | Internal repository and services | `05`, `06` | `Deferred` | **Deferred to 06:** reads/writes coupled in one handler; Prisma migration deferred to transactional voting service (`06`). |
+| `app/api/voting/route.ts` | Supabase | Voting data reads/writes | `voting-service` (Prisma) | `05`, `06` | `Done` | GET uses `listProjectsInActiveVotingWindow`; vote writes go through `castVote` in `lib/actions` → service. |
 | `lib/actions/chart.ts` | Supabase | Financial chart/category reads and writes | Internal repository/service layer | `05`, `06` | Done | Maps legacy `charts` reads/writes to `ledger_accounts` via `ledger-account-repository`. |
 | `app/api/open-ledger-metrics/route.ts` | Supabase RPC | Public metrics endpoint | Service-layer aggregation or SQL view under internal DB ownership | `05` | Done | `ledger-metrics-repository` (approximate aggregate; see `05-data-access-repositories-and-read-migration.md` RPC notes). |
 | `app/api/marquee-data/route.ts` | Supabase RPC | Marquee data endpoint | Internal query/service implementation | `05` | Done | Returns `{ items, default_currency }` via `getMarqueePayload()`. |
@@ -111,7 +111,7 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/cases/create/route.ts` | Clerk, Supabase | Public case creation | Internal auth + transactional service | `03`, `06` | Not Started |
+| `app/api/cases/create/route.ts` | Clerk, Supabase | Public case creation | `getSession` + `case-intake-service` (`prisma.$transaction`) | `03`, `06` | `Done` | Case + optional files in one transaction. |
 | `app/api/cases/route.ts` | Clerk, Supabase | Admin case listing | Internal authz + repository query | `04`, `05` | Done | `case-repository` + `requireRole`. |
 | `app/api/cases/upload/route.ts` | Supabase Storage | Case file upload | Internal storage adapter | `07` | Not Started |
 | `lib/actions/cases.ts` | Supabase | Case data and stats | Internal repositories/services | `05`, `06` | Done | Reads and case admin mutations use Prisma (`case-repository` / `prisma`); align with `06` for transactional review flows if needed. |
@@ -122,18 +122,18 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/events/route.ts` | Supabase | Events read/write | Internal repository/service layer | `05`, `06` | `Deferred` | **Deferred to 06:** events API mixes reads and mutations on Supabase; migrate with `06` event/write services to avoid split data sources. |
+| `app/api/events/route.ts` | Supabase | Events read/write | `event-service` (`listEventsForPublicDashboard`) | `05`, `06` | `Done` | GET only in app today; Prisma-backed list. Event **mutations** remain a future surface if product adds POST/PATCH (not present in prior handler). |
 | `lib/actions/settings.ts` | Clerk, Supabase | Settings read/write and validation | Internal authz + repositories + audit services | `04`, `05`, `06` | Done | Prisma `settings` + `getCurrentUser` / `getPrimaryRole` for access checks; audit polish in `06`. |
 | `lib/utils/settings.ts` | Supabase | Settings utility access | Internal repository/service access | `05` | Done | Uses `settings-repository` + cache. |
-| `lib/actions/index.ts` | Clerk, Supabase | Mixed helper queries and role lookups | Split into internal auth and data modules | `03`, `04`, `05` | In Progress | Project reads + `canUserVote` eligibility use Prisma; `saveVote` + `syncRole(s)` still touch Supabase (`06` boundary). |
-| `lib/actions/users.ts` | Clerk, Supabase | User operations | Internal repository/service layer | `05`, `06` | In Progress | `getTotalUserCount` / dev profile use Prisma; Clerk remains for admin mutations. |
+| `lib/actions/index.ts` | Clerk, Supabase | Mixed helper queries and role lookups | Split into internal auth and data modules | `03`, `04`, `05`, `06` | In Progress | `saveVote` uses `voting-service` (Prisma). `syncRoles` / `syncRole` still write legacy Supabase `profiles.role` for Clerk-era denormalization (`09` cleanup). |
+| `lib/actions/users.ts` | Clerk, Supabase | User operations | Prisma `User` / `UserRole` + `getSession` | `05`, `06` | `Done` | Admin role updates, deactivate (status), user details, `getUser` / `getUsers` no longer call Clerk. |
 
 ## Uploads and Webhooks
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
 | `app/api/upload-image/route.ts` | Clerk, Supabase Storage | Project or general image upload | Internal auth + storage adapter | `07` | Not Started |
-| `app/api/webhooks/switchapp/route.ts` | Supabase | Payment webhook side effects | Internal transactional services | `06` | Not Started |
+| `app/api/webhooks/switchapp/route.ts` | Supabase | Payment webhook side effects | `switchapp-webhook-service` (`applySwitchappChargeOutcome`, Prisma `$transaction`) | `06` | `Done` | Replaces RPC increment with `currentAmount` increment on completed pledge payments. |
 
 ## UI Components with Auth-Specific Coupling
 

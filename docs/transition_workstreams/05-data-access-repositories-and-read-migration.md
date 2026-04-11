@@ -123,8 +123,8 @@ The following legacy Supabase RPCs are **not** reproduced 1:1 in Prisma; first-p
 
 ### Deferred to 06 (explicit)
 
-The following surfaces still use **`supabaseAdmin`** reads; they were **not** migrated in `05` so reads and writes can move together under workstream **`06`** (voting/events transactional services):
+The following surfaces were deferred from `05` and are **migrated in workstream `06`** (voting/events services and dashboard voting page):
 
-- `app/api/voting/route.ts`
-- `app/api/events/route.ts`
-- `app/(dashboard)/dashboard/voting/page.tsx`
+- `app/api/voting/route.ts` → `voting-service`
+- `app/api/events/route.ts` → `event-service`
+- `app/(dashboard)/dashboard/voting/page.tsx` → `requireAuth` + `listVotingDashboardProjects`

@@ -1,93 +1,89 @@
-'use server';
-import { auth } from '@clerk/nextjs/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
-import { capitalize } from 'lodash';
-import { pledgeSchema } from '../zod-schema';
+"use server";
 
-
+import {
+  PledgeStatus,
+  TransactionDirection,
+  TransactionKind,
+  TransactionStatus,
+} from "@prisma/client";
+import { prisma } from "@/lib/db/prisma";
+import { getSession } from "@/lib/auth/server";
+import { revalidatePath } from "next/cache";
+import { pledgeSchema } from "../zod-schema";
+import { createPendingPledge } from "@/lib/services/pledge-service";
+import {
+  listPledgesForAdmin,
+  mapPledgeAdminTableRow,
+} from "@/lib/repositories/pledge-repository";
+import { ProjectStatus } from "@prisma/client";
 
 export async function createPledge(formData: FormData) {
   try {
-    // Authenticate user
-    const { userId } = await auth();
+    const session = await getSession();
+    const userId = session?.user?.id;
     if (!userId) {
-      return { error: 'You must be signed in to pledge' };
+      return { error: "You must be signed in to pledge" };
     }
 
-    // Parse and validate form data
     const data = {
-      projectId: formData.get('projectId') as string | undefined,
-      amount: Number(formData.get('amount')),
-      pledgeType: formData.get('pledgeType') as 'one_time' | 'recurring',
-      recurrenceInterval: formData.get('recurrenceInterval') as 'monthly' | 'quarterly' | 'yearly' | undefined,
-      paymentDay: formData.get('paymentDay') as 'today' | '1st' | '28th' | undefined,
+      projectId: formData.get("projectId") as string | undefined,
+      amount: Number(formData.get("amount")),
+      pledgeType: formData.get("pledgeType") as "one_time" | "recurring",
+      recurrenceInterval: formData.get("recurrenceInterval") as
+        | "monthly"
+        | "quarterly"
+        | "yearly"
+        | undefined,
+      paymentDay: formData.get("paymentDay") as "today" | "1st" | "28th" | undefined,
     };
-    console.log('Creating pledge with data:', data);
+
     const validated = pledgeSchema.safeParse(data);
     if (!validated.success) {
       return { error: validated.error.errors[0].message };
     }
 
-    // Check project status if projectId is provided
     let projectSlug: string | null = null;
     if (validated.data.projectId) {
-      const { data: project, error: projectError } = await supabaseAdmin
-        .from('projects')
-        .select('status, slug')
-        .eq('id', validated.data.projectId)
-        .single();
+      const project = await prisma.project.findUnique({
+        where: { id: validated.data.projectId },
+        select: { status: true, slug: true },
+      });
 
-      if (projectError || !project) {
-        return { error: 'Project not found' };
+      if (!project) {
+        return { error: "Project not found" };
       }
 
-      if (!['active', 'voting'].includes(project.status)) {
-        return { error: 'Pledges are only allowed for active or voting projects' };
+      if (
+        project.status !== ProjectStatus.ACTIVE &&
+        project.status !== ProjectStatus.VOTING
+      ) {
+        return { error: "Pledges are only allowed for active or voting projects" };
       }
       projectSlug = project.slug;
     }
 
-    // Insert pledge
-    const { data: pledgeData, error: pledgeError } = await supabaseAdmin.from('pledges').insert({
-      project_id: validated.data.projectId || null,
-      user_id: userId,
+    const created = await createPendingPledge({
+      userId,
       amount: validated.data.amount,
-      pledge_type: validated.data.pledgeType,
-      recurrence_interval: validated.data.recurrenceInterval || null,
-      status: 'pending',
-      payment_day: validated.data.paymentDay || null,
+      pledgeType: validated.data.pledgeType,
+      recurrenceInterval: validated.data.recurrenceInterval ?? undefined,
+      paymentDay: validated.data.paymentDay ?? undefined,
+      projectId: validated.data.projectId ?? undefined,
     });
 
-    if (pledgeError) {
-      console.error('Pledge error:', pledgeError);
-      return { error: 'Failed to create pledge' };
+    if ("error" in created) {
+      return { error: created.error };
     }
 
-    // Update project current_amount if tied to a project
-    if (validated.data.projectId) {
-      const { error: updateError } = await supabaseAdmin
-        .from('projects')
-        .update({ current_amount: validated.data.amount })
-        .eq('id', validated.data.projectId);
-
-      if (updateError) {
-        console.error('Error updating project amount:', updateError);
-        return { error: 'Pledge created, but failed to update project amount' };
-      }
-    }
-
-    // Revalidate paths
     if (projectSlug) {
       revalidatePath(`/projects/${projectSlug}`);
     }
-    revalidatePath('/dashboard');
+    revalidatePath("/dashboard");
 
-    return { success: 'Pledge created successfully', projectSlug };
+    return { success: "Pledge created successfully", projectSlug };
   } catch (error) {
-    console.error('Error creating pledge:', error);
-    return { error: 'Internal server error' };
+    console.error("Error creating pledge:", error);
+    return { error: "Internal server error" };
   }
 }
 
@@ -95,7 +91,7 @@ interface Pledge {
   id: string;
   user_id: string;
   user_email: string;
-  full_name: string;  
+  full_name: string;
   project_id: string | null;
   project_title: string | null;
   amount: number;
@@ -106,37 +102,41 @@ interface Pledge {
   created_at: string;
 }
 
-export async function fetchPledges(pageIndex: number, pageSize: number, globalFilter: string) {
+export async function fetchPledges(
+  pageIndex: number,
+  pageSize: number,
+  globalFilter: string
+) {
   try {
-    const { data, error } = await supabaseAdmin.rpc("get_pledges", {
-      page_index: pageIndex,
-      page_size: pageSize,
-      filter: globalFilter || null,
+    const { rows, total } = await listPledgesForAdmin({
+      pageIndex,
+      pageSize,
+      globalFilter,
+      statusFilter: "",
+      pledgeTypeFilter: "",
+      recurrenceIntervalFilter: "",
+      dateFrom: null,
+      dateTo: null,
+      dateField: "created_at",
     });
 
-    if (error) {
-      console.log(error);
-      throw new Error(error.message);
-    }
-
-    // Transform data to match Pledge interface
-    const pledges: Pledge[] = data.map((item: any) => ({
-      id: item.id,
-      user_id: item.user_id,
-      user_email: item.user_email || "Unknown",
-      full_name: capitalize(item.first_name || "") + " " + capitalize(item.last_name || ""),
-      project_id: item.project_id,
-      project_title: item.project_title || null,
-      amount: item.amount,
-      pledge_type: item.pledge_type,
-      recurrence_interval: item.recurrence_interval,
-      payment_day: item.payment_day,
-      status: item.status,
-      created_at: item.created_at,
-    }));
-
-
-    const total = data[0]?.total_count || 0;
+    const pledges: Pledge[] = rows.map((p) => {
+      const m = mapPledgeAdminTableRow(p);
+      return {
+        id: m.id,
+        user_id: m.user_id ?? "",
+        user_email: m.user_email,
+        full_name: m.full_name,
+        project_id: m.project_id,
+        project_title: m.project_title,
+        amount: m.amount,
+        pledge_type: m.pledge_type as Pledge["pledge_type"],
+        recurrence_interval: m.recurrence_interval as Pledge["recurrence_interval"],
+        payment_day: m.payment_day as Pledge["payment_day"],
+        status: m.status as Pledge["status"],
+        created_at: m.created_at,
+      };
+    });
 
     return { data: pledges, total };
   } catch (error) {
@@ -152,41 +152,37 @@ export async function markPledgeAsCompleted(
   amount: number
 ) {
   try {
-    // Update pledge status
-    const { data: updatedPledge, error: pledgeError } = await supabaseAdmin
-      .from("pledges")
-      .update({ status: "completed", updated_at: new Date().toISOString() })
-      .eq("id", pledgeId)
-      .eq("status", "pending")
-      .select()
-      .single();
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.pledge.updateMany({
+        where: { id: pledgeId, status: PledgeStatus.PENDING },
+        data: { status: PledgeStatus.COMPLETED, completedAt: new Date() },
+      });
 
-    if (pledgeError || !updatedPledge) {
-      throw new Error(pledgeError?.message || "Pledge is not in pending status or does not exist");
-    }
+      if (updated.count !== 1) {
+        throw new Error("Pledge is not in pending status or does not exist");
+      }
 
-    // Create transaction record
-    const { error: transactionError } = await supabaseAdmin.from("transactions").insert({
-      pledge_id: pledgeId,
-      user_id: userId,
-      project_id: projectId,
-      amount,
-      status: "completed",
-      created_at: new Date().toISOString(),
+      await tx.transaction.create({
+        data: {
+          pledgeId,
+          userId,
+          projectId,
+          amount,
+          currency: "NGN",
+          direction: TransactionDirection.CREDIT,
+          kind: TransactionKind.PLEDGE,
+          status: TransactionStatus.COMPLETED,
+          paidAt: new Date(),
+        },
+      });
     });
-
-    if (transactionError) {
-      // Attempt to rollback pledge update (Supabase doesn't support transactions natively)
-      await supabaseAdmin
-        .from("pledges")
-        .update({ status: "pending", updated_at: new Date().toISOString() })
-        .eq("id", pledgeId);
-      throw new Error(transactionError.message);
-    }
 
     return { success: true };
   } catch (error) {
     console.error("Error marking pledge as completed:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
