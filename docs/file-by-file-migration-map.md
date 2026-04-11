@@ -17,6 +17,7 @@ For each file, it identifies:
 - `Not Started`
 - `In Progress`
 - `Blocked`
+- `Deferred` — intentionally postponed; see **Notes** for owning workstream and reason
 - `Done`
 - `Remove`
 
@@ -50,7 +51,7 @@ For each file, it identifies:
 | `app/(dashboard)/dashboard/page.tsx` | Clerk | Dashboard user flow | Internal session helpers | `03` | Not Started |
 | `app/(dashboard)/dashboard/account/page.tsx` | Clerk | Account/profile page | Internal user profile model | `03`, `06` | Not Started |
 | `app/(dashboard)/dashboard/events/page.tsx` | Clerk | Dashboard events/user state | Internal session model | `03`, `05` | Not Started |
-| `app/(dashboard)/dashboard/voting/page.tsx` | Clerk, Supabase | Voting dashboard reads | Internal auth + ORM reads | `04`, `05` | Not Started |
+| `app/(dashboard)/dashboard/voting/page.tsx` | Clerk, Supabase | Voting dashboard reads | Internal auth + ORM reads | `04`, `05`, `06` | `Deferred` | **Deferred to 06:** page still uses `supabaseAdmin` for voting data; migrate with voting read service when writes move off Supabase. |
 | `app/(dashboard)/admin/users/page.tsx` | Clerk | Admin user management | Internal users repository and admin UI | `05`, `06` | Not Started |
 | `app/(dashboard)/admin/cases/case-actions.tsx` | Clerk | User-aware admin case actions | Internal session and role model | `04`, `06` | Not Started |
 | `app/(public)/pledge/page.tsx` | Clerk | Auth-aware public pledge flow | Internal auth/session handling | `03`, `06` | Not Started |
@@ -99,7 +100,7 @@ For each file, it identifies:
 | `app/api/transactions/create/route.ts` | Clerk, Supabase | Transaction creation | Internal authz + transactional service | `04`, `06` | Not Started |
 | `app/api/transactions/export/route.ts` | Clerk, Supabase | Transaction export | Internal authz + ORM query/export | `04`, `05` | Done | `transaction-repository` export list. |
 | `lib/actions/transaction.ts` | Supabase | Transaction query logic | Internal repository/service layer | `05`, `06` | Done | Server actions call `transaction-repository`. |
-| `app/api/voting/route.ts` | Supabase | Voting data reads/writes | Internal repository and services | `05`, `06` | Not Started |
+| `app/api/voting/route.ts` | Supabase | Voting data reads/writes | Internal repository and services | `05`, `06` | `Deferred` | **Deferred to 06:** reads/writes coupled in one handler; Prisma migration deferred to transactional voting service (`06`). |
 | `lib/actions/chart.ts` | Supabase | Financial chart/category reads and writes | Internal repository/service layer | `05`, `06` | Done | Maps legacy `charts` reads/writes to `ledger_accounts` via `ledger-account-repository`. |
 | `app/api/open-ledger-metrics/route.ts` | Supabase RPC | Public metrics endpoint | Service-layer aggregation or SQL view under internal DB ownership | `05` | Done | `ledger-metrics-repository` (approximate aggregate; see `05-data-access-repositories-and-read-migration.md` RPC notes). |
 | `app/api/marquee-data/route.ts` | Supabase RPC | Marquee data endpoint | Internal query/service implementation | `05` | Done | Returns `{ items, default_currency }` via `getMarqueePayload()`. |
@@ -121,7 +122,7 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/events/route.ts` | Supabase | Events read/write | Internal repository/service layer | `05`, `06` | Not Started |
+| `app/api/events/route.ts` | Supabase | Events read/write | Internal repository/service layer | `05`, `06` | `Deferred` | **Deferred to 06:** events API mixes reads and mutations on Supabase; migrate with `06` event/write services to avoid split data sources. |
 | `lib/actions/settings.ts` | Clerk, Supabase | Settings read/write and validation | Internal authz + repositories + audit services | `04`, `05`, `06` | Done | Prisma `settings` + `getCurrentUser` / `getPrimaryRole` for access checks; audit polish in `06`. |
 | `lib/utils/settings.ts` | Supabase | Settings utility access | Internal repository/service access | `05` | Done | Uses `settings-repository` + cache. |
 | `lib/actions/index.ts` | Clerk, Supabase | Mixed helper queries and role lookups | Split into internal auth and data modules | `03`, `04`, `05` | In Progress | Project reads + `canUserVote` eligibility use Prisma; `saveVote` + `syncRole(s)` still touch Supabase (`06` boundary). |

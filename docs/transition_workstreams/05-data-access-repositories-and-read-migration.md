@@ -120,3 +120,11 @@ The following legacy Supabase RPCs are **not** reproduced 1:1 in Prisma; first-p
 | `get_public_ledger` | `public-ledger-repository` + `GET /api/public-ledger` | `running_balance` is computed only over the returned window (not full ledger history). Top-donor date fields are approximate. Realtime updates were replaced with polling in `hooks/use-public-ledger.ts`. |
 | `get_transactions` / `fetch_transaction` | `transaction-repository` Prisma queries | Filter semantics and joined columns follow the new schema (`TransactionKind`, `TransactionStatus`, `ledger_accounts`); validate against migrated data. |
 | `get_pledges` (export path only here) | `pledge-repository` | Full pledge listing route (`app/api/pledges/route.ts`) remains on Supabase until workstream `06`. |
+
+### Deferred to 06 (explicit)
+
+The following surfaces still use **`supabaseAdmin`** reads; they were **not** migrated in `05` so reads and writes can move together under workstream **`06`** (voting/events transactional services):
+
+- `app/api/voting/route.ts`
+- `app/api/events/route.ts`
+- `app/(dashboard)/dashboard/voting/page.tsx`
