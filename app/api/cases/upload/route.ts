@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { buildImagesObjectKey, uploadPublicObject } from "@/lib/storage";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 /**
  * POST /api/cases/upload
- * Handles multiple image uploads for case reports
- * Validates file size (max 2MB) and type (images only)
+ * Handles multiple image uploads for case reports (public; no session required).
+ *
+ * **Transactional note (workstream 06):** Objects are committed to object storage here; the
+ * caller then submits `/api/cases/create` which persists `case_files.file_url` in a Prisma
+ * `$transaction`. If the case create fails after a successful upload, storage objects may be
+ * orphaned until a cleanup job or workstream `08` backfill reconciles them.
  */
 export async function POST(request: Request) {
   try {
@@ -15,13 +19,9 @@ export async function POST(request: Request) {
     const files = formData.getAll("files") as File[];
 
     if (!files || files.length === 0) {
-      return NextResponse.json(
-        { error: "No files provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
-    // Validate all files before uploading
     const validationErrors: string[] = [];
     files.forEach((file, index) => {
       if (!ALLOWED_TYPES.includes(file.type)) {
@@ -43,7 +43,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Upload files to Supabase Storage
     const uploadedFiles: Array<{
       url: string;
       name: string;
@@ -52,41 +51,35 @@ export async function POST(request: Request) {
     }> = [];
 
     for (const file of files) {
-      const fileExt = file.name.split(".").pop();
+      const fileExt = file.name.split(".").pop() || "bin";
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `cases/${fileName}`;
+      const objectKey = buildImagesObjectKey("cases", fileName);
 
-      // Convert File to ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const buffer = Buffer.from(await file.arrayBuffer());
 
-      // Upload to Supabase Storage
-      const { data, error } = await supabaseAdmin.storage
-        .from("images")
-        .upload(filePath, buffer, {
+      try {
+        const { publicUrl } = await uploadPublicObject({
+          objectKey,
+          body: buffer,
           contentType: file.type,
-          upsert: false,
         });
 
-      if (error) {
-        console.error("Error uploading file:", error);
+        uploadedFiles.push({
+          url: publicUrl,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type,
+        });
+      } catch (e) {
+        console.error("Error uploading file:", e);
         return NextResponse.json(
-          { error: `Failed to upload ${file.name}`, details: error.message },
+          {
+            error: `Failed to upload ${file.name}`,
+            details: e instanceof Error ? e.message : "Unknown error",
+          },
           { status: 500 }
         );
       }
-
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabaseAdmin.storage.from("images").getPublicUrl(filePath);
-
-      uploadedFiles.push({
-        url: publicUrl,
-        name: file.name,
-        size: file.size,
-        mimeType: file.type,
-      });
     }
 
     return NextResponse.json(

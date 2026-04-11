@@ -37,8 +37,7 @@ Used by:
 
 Why kept:
 
-- current auth remains Clerk-backed
-- the avatar upload route still calls Clerk directly
+- current auth remains Clerk-backed for some UI surfaces until workstreams `03` and `09`
 - the user webhook route still depends on Clerk webhook verification
 - routing compatibility should not change before workstreams `03`, `04`, and `09`
 
@@ -50,8 +49,8 @@ Why kept:
 
 Why kept:
 
-- current read and write paths still create Supabase clients in `lib/supabase.ts`, `lib/supabase-provider.tsx`, and `lib/supabase-admin.ts`
-- API routes still depend on the Supabase admin client
+- current read and write paths still create Supabase clients in `lib/supabase.ts`, `lib/supabase-provider.tsx`, and `lib/supabase-admin.ts` for deferred surfaces (for example parts of `project-form.tsx`)
+- API routes no longer use Supabase Storage; uploads use `lib/storage` instead
 
 ### Legacy Payment Provider
 
@@ -95,17 +94,19 @@ Operational note:
 
 ### S3 or Cloudflare R2
 
-- `STORAGE_PROVIDER`
+- `STORAGE_PROVIDER` — `s3` (default) or `r2`; both use the same S3-compatible client (`S3_ENDPOINT` distinguishes R2).
 - `S3_BUCKET`
-- `S3_REGION`
-- `S3_ENDPOINT`
+- `S3_REGION` — use `auto` for Cloudflare R2 when using the R2 S3 API.
+- `S3_ENDPOINT` — required for R2 and custom/MinIO endpoints; omit for default AWS regional endpoints.
 - `S3_ACCESS_KEY_ID`
 - `S3_SECRET_ACCESS_KEY`
-- `S3_PUBLIC_BASE_URL`
+- `S3_PUBLIC_BASE_URL` — public origin for `next/image` and for persisted `https?://` URLs (CDN or bucket website), no trailing slash.
+- `S3_FORCE_PATH_STYLE` — optional; set to `true` for some S3-compatible servers that require path-style addressing.
 
 Why introduced:
 
 - they match the approved transition target and avoid adding speculative non-approved providers
+- workstream `07` upload routes (`/api/upload-image`, `/api/cases/upload`, `/api/users/[id]/upload-avatar`) call `lib/storage` and require these variables at runtime when those features are used
 
 ## Removed Variable Categories
 
@@ -139,13 +140,11 @@ These were found during audit and are intentionally documented rather than chang
 
 ### Hardcoded Vendor URLs
 
-- [components/components/team-carousel.tsx](/var/www/html/morris/components/components/team-carousel.tsx:31) contains hardcoded Supabase Storage public asset URLs
-- [app/api/users/[id]/upload-avatar/route.ts](/var/www/html/morris/app/api/users/[id]/upload-avatar/route.ts:27) calls the Clerk API directly at a fixed vendor endpoint
+- Resolved for workstream `07`: team carousel portraits now use same-origin assets under `public/images/team/`, and avatar uploads use `lib/storage` plus `requireAuth` instead of the Clerk profile image API.
 
 Impact:
 
-- no secret exposure was found in these files
-- they remain migration blockers because they hardcode legacy vendor infrastructure outside environment configuration
+- remaining hardcoded third-party image URLs should be tracked only if new ones are introduced outside env-driven storage
 
 ### SwitchApp Webhook Trust Model
 

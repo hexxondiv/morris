@@ -32,31 +32,28 @@ const TeamCarousel: React.FC<TeamCarouselProps> = ({ className = "" }) => {
     {
       name: "Alex Onyia",
       role: "Executive Director",
-      image:
-        "https://asmfvpxvztbbkcrgkrtd.supabase.co/storage/v1/object/public/images/team/alex.jpeg",
+      image: "/images/team/alex.svg",
       linkedin: "https://www.linkedin.com/in/alex-onyia-baa39873",
       bio: "Alex is the CEO of EduCare Technology and a leading figure in Nigeria's education sector. He creates technology solutions that help students learn better and teachers teach more effectively.\n\nAs Executive Director, Alex leads programs that have helped thousands of students across Africa get better education. He works with schools, universities, and tech companies to bring digital learning to communities that need it most.\n\nAlex is recognized as one of Nigeria's top education technology leaders. He continues to fight for better education and digital skills for everyone across the continent.",
     },
     {
       name: "Gaius Chibueze",
       role: "Director",
-      image: "https://asmfvpxvztbbkcrgkrtd.supabase.co/storage/v1/object/public/images/team/gauis.jpg",
+      image: "/images/team/gauis.svg",
       linkedin: "https://x.com/gaiuschibueze",
       bio: ""
     },
     {
       name: "Udeigwe Maureen Uju",
       role: "Project Director",
-      image:
-        "https://asmfvpxvztbbkcrgkrtd.supabase.co/storage/v1/object/public/images/team/uju.jpg",
+      image: "/images/team/uju.svg",
       linkedin: "https://www.linkedin.com/in/uju-ibeh/",
       bio: "Uju is a skilled project manager who makes sure complex projects run smoothly from start to finish. She coordinates teams, manages resources, and ensures projects deliver real results for communities.\n\nAs Project Director, Uju has successfully managed million-dollar initiatives across multiple locations. Her careful planning and attention to detail help projects stay on track and achieve their goals.\n\nUju is known for her ability to bring people together and navigate challenges while keeping everyone focused on the mission.",
     },
     {
       name: "James Nnayelugo",
       role: "Chief Tech Officer",
-      image:
-        "https://asmfvpxvztbbkcrgkrtd.supabase.co/storage/v1/object/public/images/team/james.jpeg",
+      image: "/images/team/james.svg",
       linkedin: "https://www.linkedin.com/in/jamesnnanyelugo/",
       bio: "James is a Senior Software Engineer with 9 years of experience building technology that serves millions of users worldwide. He specializes in creating systems that can handle large amounts of traffic while staying fast and reliable.\n\nAs Chief Tech Officer, James has built systems that reduced downtime by 40% and made deployments 60% more efficient. He leads our technical strategy while mentoring other developers.\n\nJames is known for his ability to solve complex technical problems and build teams that create innovative solutions.",
     },

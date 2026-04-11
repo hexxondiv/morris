@@ -94,6 +94,8 @@ export async function createCaseIntake(
         },
       });
 
+      // File bytes are uploaded separately (see `/api/cases/upload`); this transaction only
+      // records metadata. `storageKey` remains a placeholder until workstream `08` aligns keys.
       if (payload.files?.length) {
         for (const f of payload.files) {
           await tx.caseFile.create({

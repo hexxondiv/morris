@@ -1,57 +1,59 @@
-// app/api/upload-avatar/route.ts
-import { auth } from '@clerk/nextjs/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db/prisma";
+import { requireAuth } from "@/lib/auth/server";
+import { buildImagesObjectKey, uploadPublicObject } from "@/lib/storage";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { userId } = await auth();
-    
-    if (!userId || userId !== id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth();
+    if (!auth.authorized) {
+      return auth.response;
     }
 
-    // Get the raw request body and forward it to Clerk
+    if (auth.userId !== id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await request.formData();
-    
-    // Create a new FormData for Clerk
-    const clerkFormData = new FormData();
-    const file = formData.get('file') as File;
-    
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    const file = formData.get("file") as File;
+
+    if (!file || typeof file === "string") {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    clerkFormData.append('file', file);
+    if (!file.type.startsWith("image/")) {
+      return NextResponse.json({ error: "Only image uploads are allowed" }, { status: 400 });
+    }
 
-    // Use fetch directly to Clerk's API (if you have the endpoint)
-    // This is more direct and might avoid any transformation issues
-    const clerkResponse = await fetch(`https://api.clerk.dev/v1/users/${userId}/profile_image`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
-      },
-      body: clerkFormData,
+    const fileExt = file.name.split(".").pop() || "jpg";
+    const objectKey = buildImagesObjectKey(`avatars/${id}`, `${Date.now()}.${fileExt}`);
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    const { publicUrl } = await uploadPublicObject({
+      objectKey,
+      body: buffer,
+      contentType: file.type || "image/jpeg",
     });
 
-    if (!clerkResponse.ok) {
-      const errorData = await clerkResponse.json();
-      throw new Error(`Clerk API error: ${JSON.stringify(errorData)}`);
-    }
+    await prisma.user.update({
+      where: { id },
+      data: { avatarUrl: publicUrl },
+    });
 
-    const result = await clerkResponse.json();
-    
     return NextResponse.json({
-      url: result.image_url,
+      url: publicUrl,
       success: true,
-      message: 'Avatar updated successfully'
+      message: "Avatar updated successfully",
     });
-
-  } catch (error: any) {
-    console.error('Direct Clerk API error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to upload avatar',
-      details: error.message 
-    }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("upload-avatar:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to upload avatar",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }

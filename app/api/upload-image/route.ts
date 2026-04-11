@@ -1,42 +1,42 @@
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { auth } from '@clerk/nextjs/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth/server";
+import { buildImagesObjectKey, sanitizeFolderPrefix, uploadPublicObject } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireAuth();
+  if (!auth.authorized) {
+    return auth.response;
   }
+
   const formData = await req.formData();
-  const file = formData.get('file') as File;
-  const path = formData.get('path') as string;
+  const file = formData.get("file") as File;
+  const path = formData.get("path") as string;
 
-  if (!file || typeof file === 'string') {
-    return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+  if (!file || typeof file === "string") {
+    return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  const fileExt = file.name.split('.').pop();
-  let filePath = `${Date.now()}.${fileExt}`;
-  if (path) {
-    filePath = `${path}/${filePath}`;
-  }
-  // Ensure file path length is reasonable
-  if (filePath.length > 100) {
-    return NextResponse.json({ error: 'File path is too long' }, { status: 400 });
+  const fileExt = file.name.split(".").pop() || "bin";
+  const folder = sanitizeFolderPrefix(path);
+  const fileName = `${Date.now()}.${fileExt}`;
+  const objectKey = buildImagesObjectKey(folder, fileName);
+
+  if (objectKey.length > 200) {
+    return NextResponse.json({ error: "File path is too long" }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin.storage
-    .from('images')
-    .upload(filePath, file, {
-      contentType: file.type,
-      upsert: true,
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { publicUrl } = await uploadPublicObject({
+      objectKey,
+      body: buffer,
+      contentType: file.type || "application/octet-stream",
     });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ url: publicUrl, path: objectKey });
+  } catch (e) {
+    console.error("upload-image:", e);
+    const message = e instanceof Error ? e.message : "Upload failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const { data: urlData } = supabaseAdmin.storage.from('images').getPublicUrl(filePath);
-
-  return NextResponse.json({ url: urlData.publicUrl, path: filePath });
 }

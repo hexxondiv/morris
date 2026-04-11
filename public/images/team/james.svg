@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" role="img" aria-label="Team placeholder portrait">
+  <defs>
+    <linearGradient id="bg4" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9a3412"/>
+      <stop offset="100%" stop-color="#431407"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg4)"/>
+  <circle cx="400" cy="360" r="140" fill="#c2410c" opacity="0.88"/>
+  <ellipse cx="400" cy="720" rx="220" ry="280" fill="#c2410c" opacity="0.82"/>
+</svg>

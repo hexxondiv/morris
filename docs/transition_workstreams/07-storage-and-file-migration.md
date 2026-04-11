@@ -83,6 +83,13 @@ Secondary coordination:
 2. Public assets resolve correctly through the new storage model.
 3. The storage layer can be swapped or extended without touching business logic.
 
+## Legacy assets and URLs (workstream `07` outcome)
+
+1. **Existing Supabase Storage objects** were not bulk-copied in this pass. Rows and UI that still point at `*.supabase.co/storage/v1/object/public/...` URLs keep working as long as the legacy Supabase project and bucket remain available. Workstream `08` should plan a content migration (re-upload or proxy) and URL rewrite for any records that must survive Supabase teardown.
+2. **New uploads** write under predictable keys in the configured bucket (see `lib/storage/object-keys.ts`): `images/project-covers/*`, `images/cases/*`, `images/avatars/{userId}/*`, and `images/misc/*` when no safe folder prefix is supplied.
+3. **Team carousel** no longer hardcodes Supabase URLs; placeholder SVGs live under `public/images/team/`. Production portraits can later be served from the same object storage/CDN via env-driven configuration in workstream `08` or `09` if desired.
+4. **Case intake vs storage** is intentionally two-step: `/api/cases/upload` then `/api/cases/create`. If create fails after upload, objects may be orphaned until cleanup or migration tooling addresses them.
+
 ## Completion Checklist
 
 1. Upload files in the migration map are handled or explicitly deferred.

@@ -1,8 +1,8 @@
 // components/forms/project-form.tsx
 /**
- * Workstream 06/07 boundary: project create/update, timelines, and voting periods still use the
- * Supabase JS client for reads and writes. Deferred from workstream 05 until transactional services
- * and storage migration own those paths.
+ * Workstream 06 boundary: project create/update, timelines, and voting periods still use the
+ * Supabase JS client for reads and writes. Cover images upload via `/api/upload-image` and
+ * first-party object storage (workstream `07`); this form does not call Supabase Storage.
  */
 "use client";
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -20,7 +20,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useSupabase } from "@/lib/supabase-provider";
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { SimpleEditor } from "../tiptap-templates/simple/simple-editor";
@@ -429,25 +428,18 @@ export default function ProjectForm({ project, onClose }: ProjectFormProps) {
   const isTransitioningToActive =
     status === "active" && previousStatus !== "active";
 
-  // Fetch user role and voting period (if editing)
   useEffect(() => {
-    async function fetchUserRoleAndVotingPeriod() {
-      if (!supabase || !userId) return;
+    if (!userId) return;
 
-      // Check if user is admin
-      const requiredRole = "editor";
-      setIsAdmin(isAuthorized(userRole, requiredRole));
+    const requiredRole = "editor";
+    setIsAdmin(isAuthorized(userRole, requiredRole));
 
-      // If project has voting period data, set it
-      if (project?.votingPeriod) {
-        setVotingPeriod(project.votingPeriod);
-        setValue("start_date", project.votingPeriod.start_date);
-        setValue("end_date", project.votingPeriod.end_date);
-      }
+    if (project?.votingPeriod) {
+      setVotingPeriod(project.votingPeriod);
+      setValue("start_date", project.votingPeriod.start_date);
+      setValue("end_date", project.votingPeriod.end_date);
     }
-
-    fetchUserRoleAndVotingPeriod();
-  }, []);
+  }, [userId, userRole, project?.votingPeriod, setValue]);
 
   const handleCoverImageChange = async (
     e: React.ChangeEvent<HTMLInputElement>

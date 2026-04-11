@@ -11,6 +11,7 @@ import Image from "next/image";
 import { saveProfile } from "@/lib/actions/users";
 
 interface EditProfileFormProps {
+  userId: string;
   profile: {
     first_name: string;
     last_name: string;
@@ -22,17 +23,51 @@ interface EditProfileFormProps {
   onSave: () => void;
 }
 
-export function EditProfileForm({ profile, onCancel, onSave }: EditProfileFormProps) {
+export function EditProfileForm({ userId, profile, onCancel, onSave }: EditProfileFormProps) {
   const [formData, setFormData] = useState({
     first_name: profile.first_name,
     last_name: profile.last_name,
     avatar_url: profile.avatar_url,
   });
   const [avatarPreview, setAvatarPreview] = useState<string>(profile.avatar_url);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/users/${userId}/upload-avatar`, {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.details || "Upload failed");
+      }
+      if (data.url) {
+        setFormData((prev) => ({ ...prev, avatar_url: data.url }));
+        setAvatarPreview(data.url);
+        toast.success("Avatar uploaded");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Avatar upload failed");
+    } finally {
+      setIsUploadingAvatar(false);
+      e.target.value = "";
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -75,10 +110,19 @@ export function EditProfileForm({ profile, onCancel, onSave }: EditProfileFormPr
             )}
           </div>
           <label
-            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white text-xs sm:text-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            htmlFor="avatar-upload-input"
+            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white text-xs sm:text-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           >
-            Avatar uploads move in workstream 07
+            {isUploadingAvatar ? "Uploading…" : "Change photo"}
           </label>
+          <input
+            id="avatar-upload-input"
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={handleAvatarFile}
+            disabled={isUploadingAvatar || isPending}
+          />
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -110,7 +154,7 @@ export function EditProfileForm({ profile, onCancel, onSave }: EditProfileFormPr
         </div>
       </div>
       <p className="text-xs text-stone-500">
-        Avatar upload remains deferred to workstream `07-storage-and-file-migration`.
+        Photos are stored on the configured object storage CDN and saved to your profile.
       </p>
       <div className="flex justify-end gap-3">
         <Button

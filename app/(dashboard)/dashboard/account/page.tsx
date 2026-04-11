@@ -126,6 +126,7 @@ export default function AccountPage() {
           <CardContent className="p-6 sm:p-8">
             {isEditing ? (
               <EditProfileForm
+                userId={displayProfile.id}
                 profile={{
                   first_name: displayProfile.first_name,
                   last_name: displayProfile.last_name,

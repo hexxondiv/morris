@@ -62,7 +62,7 @@ For each file, it identifies:
 | --- | --- | --- | --- | --- | --- |
 | `app/api/users/route.ts` | Clerk (was), Prisma | User listing | ORM-backed user listing | `05` | Done | Admin list now reads `users` + `user_roles` via `user-repository`; Clerk remains for role mutations in `lib/actions/users.ts` (`06`). |
 | `app/api/users/[id]/route.ts` | Supabase | User profile read/update | Internal repository and service layer | `05`, `06` | Not Started |
-| `app/api/users/[id]/upload-avatar/route.ts` | Clerk | Avatar upload to Clerk | Internal storage and profile update flow | `07` | Not Started |
+| `app/api/users/[id]/upload-avatar/route.ts` | Clerk (was) | Avatar upload | `requireAuth` + `lib/storage` + `users.avatar_url` (Prisma) | `07` | `Done` |
 | `app/api/users/[id]/role/route.ts` | Clerk | User role lookup | Internal role repository | `04`, `05` | Not Started |
 | `app/api/assign-role/route.ts` | Clerk | Role assignment via Clerk metadata | Internal role assignment service | `04`, `06` | Not Started |
 | `app/api/dashboard/user/route.ts` | Clerk, Supabase | Current user DB sync | Internal session + internal user repository | `03`, `05`, `06` | Not Started |
@@ -76,7 +76,7 @@ For each file, it identifies:
 | `app/api/projects/[slug]/route.ts` | Clerk, Supabase | Project detail and auth-aware access | Internal auth + repository/service reads and writes | `04`, `05`, `06` | Done | GET/PUT use Prisma repositories + `getSession` / `requireRole`; timeline mutations remain other routes (`06`). |
 | `components/components/project-page.tsx` | Supabase | Client-side project data reads | API-backed or repository-backed server flow | `05` | Done | Lists via `GET /api/projects` (no Supabase import). |
 | `components/components/project-view.tsx` | Clerk | Auth-aware project view actions | Internal session hook/helpers | `03`, `04` | Not Started |
-| `components/components/project-form.tsx` | Clerk, Supabase | Project create/edit and image flow | Internal auth, repositories, storage adapter | `03`, `05`, `06`, `07` | Blocked | Explicit `06/07` boundary comment: still uses Supabase for reads/writes until transactional services. |
+| `components/components/project-form.tsx` | Clerk, Supabase | Project create/edit and image flow | Internal auth, repositories, storage adapter | `03`, `05`, `06`, `07` | Blocked | Cover image upload uses `/api/upload-image` + first-party storage (`07` done for storage); Supabase remains for project CRUD until `06` follow-up. |
 
 ## Project Timeline APIs and Actions
 
@@ -113,7 +113,7 @@ For each file, it identifies:
 | --- | --- | --- | --- | --- | --- |
 | `app/api/cases/create/route.ts` | Clerk, Supabase | Public case creation | `getSession` + `case-intake-service` (`prisma.$transaction`) | `03`, `06` | `Done` | Case + optional files in one transaction. |
 | `app/api/cases/route.ts` | Clerk, Supabase | Admin case listing | Internal authz + repository query | `04`, `05` | Done | `case-repository` + `requireRole`. |
-| `app/api/cases/upload/route.ts` | Supabase Storage | Case file upload | Internal storage adapter | `07` | Not Started |
+| `app/api/cases/upload/route.ts` | Supabase Storage (was) | Case file upload | `lib/storage` (S3/R2) | `07` | `Done` |
 | `lib/actions/cases.ts` | Supabase | Case data and stats | Internal repositories/services | `05`, `06` | Done | Reads and case admin mutations use Prisma (`case-repository` / `prisma`); align with `06` for transactional review flows if needed. |
 | `app/api/states/route.ts` | Supabase | State lookup | Internal repository query | `05` | Done | `state-repository`. |
 | `app/api/states/[state_id]/lgas/route.ts` | Supabase | LGA lookup | Internal repository query | `05` | Done | `state-repository`. |
@@ -132,7 +132,7 @@ For each file, it identifies:
 
 | File | Current Dependency | Responsibility | Target Replacement | Workstream | Status |
 | --- | --- | --- | --- | --- | --- |
-| `app/api/upload-image/route.ts` | Clerk, Supabase Storage | Project or general image upload | Internal auth + storage adapter | `07` | Not Started |
+| `app/api/upload-image/route.ts` | Clerk, Supabase Storage (was) | Project or general image upload | `requireAuth` + `lib/storage` | `07` | `Done` |
 | `app/api/webhooks/switchapp/route.ts` | Supabase | Payment webhook side effects | `switchapp-webhook-service` (`applySwitchappChargeOutcome`, Prisma `$transaction`) | `06` | `Done` | Replaces RPC increment with `currentAmount` increment on completed pledge payments. |
 
 ## UI Components with Auth-Specific Coupling
