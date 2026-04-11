@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { List, Clock, TrendingUp } from "lucide-react";
-import { useUserStore } from "@/app/store";
 import { formatDate, toNaira } from "@/lib/utils";
 import LogoLoader from "@/components/components/logo-loader";
 import DonateButton from "@/components/components/donate-button";
@@ -22,6 +21,7 @@ import { ProjectSchema } from "@/lib/zod-schema";
 import { ProjectsGrid } from "@/components/components/project-grid";
 import Link from "next/link";
 import ReceiptDownloadButton from "@/components/components/receipt-download-button";
+import { useCurrentSession } from "@/lib/auth-client";
 
 interface DashboardData {
   profile: {
@@ -67,8 +67,7 @@ interface DashboardData {
 const Dashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const { profile } = useUserStore();
+  const { data: session, status } = useCurrentSession();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -90,12 +89,14 @@ const Dashboard: React.FC = () => {
       }
     };
 
-    if (profile) {
+    if (session?.user?.id) {
       fetchDashboardData();
+    } else if (status !== "loading") {
+      setLoading(false);
     }
-  }, [profile]);
+  }, [session?.user?.id, status]);
 
-  if (!profile) {
+  if (!session?.user?.id && status !== "loading") {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -108,7 +109,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (loading) return <LogoLoader />;
+  if (loading || status === "loading") return <LogoLoader />;
 
   if (!data) {
     return (

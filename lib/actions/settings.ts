@@ -16,7 +16,7 @@ import { getUserRoleFromClerk } from ".";
 // } from "@/lib/settings/manager";
 import type { Setting, SettingsApiResponse, ValidationResult } from "@/types/settings";
 import { clearSettingCache, clearAllCache, getSetting, getSettings, getPublicSettings, getSettingWithFallback } from "../utils/settings";
-import { requireRole } from "../clerk";
+import { requireRole } from "@/lib/auth/server";
 import { isAuthorized } from "../utils";
 
 // Validation function

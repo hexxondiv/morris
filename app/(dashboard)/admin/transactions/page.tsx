@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { fetchTransactions } from "@/lib/actions/transaction";
 import { EnhancedDataTable } from "@/components/enhanced-data-table";
 import { transactionColumns } from "@/lib/columns/transaction-columns";
-import { requireRole } from "@/lib/clerk";
+import { requireRole } from "@/lib/auth/server";
 
 export default async function TransactionsPage() {
   const auth = await requireRole("moderator");

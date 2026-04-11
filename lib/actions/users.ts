@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getUserRoleFromClerk, syncRole } from "@/lib/actions";
 import { supabaseAdmin } from "../supabase-admin";
 import { User as ClerkUser } from "@clerk/nextjs/server";
+import { getSession } from "@/lib/auth/server";
+import { prisma } from "@/lib/db/prisma";
 
 export async function updateUserRole(userId: string, role: string) {
   const { userId: currentUserId } = await auth();
@@ -191,43 +193,31 @@ export async function saveProfile({
   first_name: string;
   last_name: string;
   email: string;
-  role?: "user" | "moderator" | "editor" | "admin";
+  role?: "user" | "moderator" | "editor" | "admin" | "super_admin";
   avatar_url: string;
 }) {
-  const { userId } = await auth();
-  if (!userId) {
+  const session = await getSession();
+  if (!session?.user?.id) {
     return { success: false, error: "Unauthorized" };
   }
 
   try {
-    // Since avatar uploads are handled by the upload-avatar API,
-    // we only need to update Clerk for name changes and sync to Supabase
-    
-    const clerk = await clerkClient();
-    
-    await Promise.all([
-      // Update Clerk user names
-      clerk.users.updateUser(userId, {
-        firstName: first_name,
-        lastName: last_name,
-      }),
-      
-      // Update Supabase profile
-      supabaseAdmin
-        .from("profiles")
-        .upsert({
-          id: userId,
-          first_name,
-          last_name,
-          email,
-          role,
-          avatar_url,
-          updated_at: new Date().toISOString(),
-        })
-        .then(({ error }) => {
-          if (error) throw new Error(`Database error: ${error.message}`);
-        })
-    ]);
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        email,
+        firstName: first_name || null,
+        lastName: last_name || null,
+        displayName: [first_name, last_name].filter(Boolean).join(" ") || null,
+        avatarUrl: avatar_url || null,
+      },
+    });
+
+    await prisma.profile.upsert({
+      where: { userId: session.user.id },
+      update: {},
+      create: { userId: session.user.id },
+    });
 
     return { 
       success: true,

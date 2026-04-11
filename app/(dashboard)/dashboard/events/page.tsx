@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import Link from "next/link";
+import { useCurrentSession } from "@/lib/auth-client";
 
 interface Event {
   id: string;
@@ -27,7 +27,7 @@ interface Event {
 }
 
 export default function EventsPage() {
-  const { user, isLoaded: userLoaded } = useUser();
+  const { data: session, status } = useCurrentSession();
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,14 +35,14 @@ export default function EventsPage() {
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (userLoaded && !user) {
+    if (status === "unauthenticated") {
       router.push("/sign-in");
     }
-  }, [user, userLoaded, router]);
+  }, [router, status]);
 
   // Fetch events
   useEffect(() => {
-    if (!user || !userLoaded) return;
+    if (!session?.user) return;
 
     let isCurrent = true;
 
@@ -65,7 +65,7 @@ export default function EventsPage() {
     return () => {
       isCurrent = false;
     };
-  }, [user?.id, userLoaded]);
+  }, [session?.user, status]);
 
   // Toggle description visibility
   const toggleDescription = (eventId: string) => {
@@ -75,7 +75,7 @@ export default function EventsPage() {
     }));
   };
 
-  if (isLoading || !userLoaded) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-theme-50 flex items-center justify-center">
         <div className="h-8 w-8 text-theme-500 animate-spin" />

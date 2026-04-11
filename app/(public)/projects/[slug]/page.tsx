@@ -1,5 +1,5 @@
 import ProjectView from "@/components/components/project-view";
-import { getCookieHeader } from "@/lib/clerk";
+import { getCookieHeader } from "@/lib/auth/server";
 
 export default async function ProjectPage({
   params,

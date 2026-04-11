@@ -3,13 +3,13 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import { EditProfileForm } from "@/components/components/edit-profile-form";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Loader2, Pencil } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useCurrentSession } from "@/lib/auth-client";
 
 interface Profile {
   id: string;
@@ -17,13 +17,13 @@ interface Profile {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
-  role: "user" | "moderator" | "editor" | "admin";
+  role: "user" | "moderator" | "editor" | "admin" | "super_admin";
   created_at: string;
   updated_at: string | null;
 }
 
 export default function AccountPage() {
-  const { user, isLoaded: userLoaded } = useUser();
+  const { data: session, status } = useCurrentSession();
   const router = useRouter();
   const [apiProfile, setApiProfile] = useState<Profile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -32,22 +32,22 @@ export default function AccountPage() {
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (userLoaded && !user) {
+    if (status === "unauthenticated") {
       router.push("/sign-in");
     }
-  }, [user, userLoaded, router]);
+  }, [router, status]);
 
   // Fetch profile from API
   useEffect(() => {
-    if (!user || !userLoaded) return;
+    const userId = session?.user?.id;
+    if (!userId) return;
 
     let isCurrent = true;
 
     async function fetchProfile() {
       try {
-        if (!user?.id) return;
         setIsLoading(true);
-        const response = await fetch(`/api/users/${user.id}`, {
+        const response = await fetch(`/api/users/${userId}`, {
           cache: "no-store", // Ensure fresh data
         });
         if (!response.ok) {
@@ -70,28 +70,20 @@ export default function AccountPage() {
     return () => {
       isCurrent = false; // Prevent state updates after unmount
     };
-  }, [user?.id, userLoaded, refreshTrigger]); // Re-run on refreshTrigger
+  }, [refreshTrigger, session?.user?.id]);
 
   // Memoize displayProfile
   const displayProfile = useMemo(() => {
-    if (!user) return null;
+    if (!session?.user) return null;
     return {
-      id: user.id,
-      email:
-        apiProfile?.email || user.primaryEmailAddress?.emailAddress || "N/A",
-      first_name: apiProfile?.first_name || user.firstName || "",
-      last_name: apiProfile?.last_name || user.lastName || "",
-      avatar_url: apiProfile?.avatar_url || user.imageUrl || "",
-      role:
-        apiProfile?.role ||
-        (user.publicMetadata?.role as
-          | "user"
-          | "moderator"
-          | "editor"
-          | "admin") ||
-        "user",
+      id: session.user.id,
+      email: apiProfile?.email || session.user.email || "N/A",
+      first_name: apiProfile?.first_name || session.user.firstName || "",
+      last_name: apiProfile?.last_name || session.user.lastName || "",
+      avatar_url: apiProfile?.avatar_url || session.user.avatarUrl || "",
+      role: apiProfile?.role || session.user.role || "user",
     };
-  }, [user, apiProfile]);
+  }, [apiProfile, session?.user]);
 
   // Callback to trigger profile refresh
   const handleProfileUpdate = () => {
@@ -99,7 +91,7 @@ export default function AccountPage() {
     setIsEditing(false); // Close edit form
   };
 
-  if (!user || !userLoaded || isLoading) {
+  if (!session?.user || isLoading) {
     return (
       <div className="min-h-screen bg-theme-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-theme-500 animate-spin" />
@@ -183,7 +175,7 @@ export default function AccountPage() {
                       Joined
                     </p>
                     <p className="text-sm sm:text-base text-theme-900">
-                      {formatDate(user?.createdAt)}
+                      {formatDate(apiProfile?.created_at || null)}
                     </p>
                   </div>
                 </div>

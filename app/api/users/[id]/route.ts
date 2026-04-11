@@ -1,6 +1,7 @@
 // app/api/users/[id]/route.ts
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { prisma } from "@/lib/db/prisma";
+import { getPrimaryRole } from "@/lib/auth/roles";
 
 interface Profile {
   id: string;
@@ -8,7 +9,7 @@ interface Profile {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
-  role: "user" | "moderator" | "editor" | "admin" | null;
+  role: "user" | "moderator" | "editor" | "admin" | "super_admin" | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -22,35 +23,32 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
-    // Fetch profile from Supabase
-    const { data, error } = await supabaseAdmin
-      .from("profiles")
-      .select("id, email, first_name, last_name, avatar_url, role, created_at, updated_at")
-      .eq("id", id)
-      .single();
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              select: { key: true },
+            },
+          },
+        },
+      },
+    });
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        return NextResponse.json({ error: "User profile not found" }, { status: 404 });
-      }
-      console.error("Error fetching profile:", error);
-      return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
-    }
-
-    if (!data) {
+    if (!user) {
       return NextResponse.json({ error: "User profile not found" }, { status: 404 });
     }
 
-    // Return profile data
     const profile: Profile = {
-      id: data.id,
-      email: data.email,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      avatar_url: data.avatar_url,
-      role: data.role as "user" | "moderator" | "editor" | "admin" | null,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      id: user.id,
+      email: user.email,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      avatar_url: user.avatarUrl,
+      role: getPrimaryRole(user.userRoles),
+      created_at: user.createdAt.toISOString(),
+      updated_at: user.updatedAt.toISOString(),
     };
 
     return NextResponse.json(profile, { status: 200 });

@@ -17,6 +17,7 @@ function getAllProjects() {
   return supabaseClient.from("projects").select("*");
 }
 
+/** Workstream 05/06 boundary: bulk Clerk → Supabase profile sync; legacy migration aid only. */
 async function syncRoles() {
   const clerk = await clerkClient();
   let offset = 0;
@@ -44,6 +45,10 @@ async function syncRoles() {
   }
 }
 
+/**
+ * Workstream 05/06 boundary: writes legacy Supabase `profiles.role` only.
+ * Canonical roles live in Prisma `UserRole`; do not add new callers — migrate consumers to Prisma.
+ */
 async function syncRole(user: {
   id: string;
   publicMetadata: { role?: string };

@@ -38,13 +38,13 @@ import {
   ArrowLeft,
   CheckCircle,
 } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
 import { formatCurrency } from "@/lib/utils";
 import { pledgeSchema, projectSchema, ProjectSchema } from "@/lib/zod-schema";
 import { toast } from "sonner";
 import useSwitchAppCheckout from "@/lib/switchapp";
 import LogoLoader from "@/components/components/logo-loader";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useCurrentUser } from "@/lib/auth-client";
 
 type PledgeFormValues = z.infer<typeof pledgeSchema>;
 
@@ -115,7 +115,7 @@ function GeneralPledgeContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<PledgeFormValues | null>(null);
   const { initiateCheckout, isClientReady } = useSwitchAppCheckout();
-  const { user } = useUser();
+  const user = useCurrentUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   // TODO: Get value from settings

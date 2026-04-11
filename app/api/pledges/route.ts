@@ -1,6 +1,6 @@
 import { getUserRoleFromClerk } from "@/lib/actions";
 import { insertDevProfile } from "@/lib/actions/users";
-import { requireRole } from "@/lib/clerk";
+import { requireRole } from "@/lib/auth/server";
 import { Pledge } from "@/lib/columns/pledge-columns";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { isAuthorized } from "@/lib/utils";

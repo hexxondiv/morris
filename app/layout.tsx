@@ -1,9 +1,11 @@
 import { type Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
+import { getServerSession } from "next-auth";
 import { Inter, League_Spartan } from "next/font/google";
 import "./globals.scss";
 import { Toaster } from "sonner";
 import { SettingsInitializer } from "@/components/settings/settings-initializer";
+import { AuthSessionProvider } from "@/lib/auth-client";
+import { authOptions } from "@/lib/auth/options";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -46,25 +48,27 @@ const league = League_Spartan({
   variable: "--font-league",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession(authOptions);
+
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <head>
-          <link rel="icon" href="/favicon.png" />
-        </head>
-        <body
-          className={`${inter.variable} ${league.variable} font-inter antialiased`}
-        >
+    <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.png" />
+      </head>
+      <body
+        className={`${inter.variable} ${league.variable} font-inter antialiased`}
+      >
+        <AuthSessionProvider session={session}>
           <SettingsInitializer />
           <Toaster richColors position="top-right" />
           {children}
-        </body>
-      </html>
-    </ClerkProvider>
+        </AuthSessionProvider>
+      </body>
+    </html>
   );
 }

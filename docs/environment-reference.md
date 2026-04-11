@@ -81,6 +81,14 @@ Why introduced:
 - `AUTH_GOOGLE_ID`
 - `AUTH_GOOGLE_SECRET`
 
+Google OAuth callback for this workstream:
+
+- `${AUTH_URL}/api/auth/callback/google`
+
+Operational note:
+
+- `AUTH_URL` should match the deployed application origin exactly so Google redirects and Auth.js callback URLs stay aligned.
+
 ### MySQL
 
 - `DATABASE_URL`

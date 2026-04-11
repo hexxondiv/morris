@@ -1,12 +1,21 @@
-import { useUser } from '@clerk/nextjs';
-import { useMemo } from 'react';
+"use client";
 
-type Role = 'user' | 'admin' | 'moderator';
+import { useMemo } from "react";
+import { useSession } from "next-auth/react";
+import type { Role } from "@/types/database.types";
+import { normalizeRole } from "@/lib/auth/roles";
+import { useCurrentRole } from "@/lib/auth-client";
 
-export function useUserRole(defaultRole: Role = 'user'): Role {
-  const { user } = useUser();
+/**
+ * Client-side role from the Auth.js session (`useCurrentRole` + `useSession` status).
+ * Not sufficient for sensitive authorization; server routes must call `requireRole` / DB checks.
+ */
+export function useUserRole(defaultRole: Role = "user"): Role {
+  const { status } = useSession();
+  const role = useCurrentRole();
 
   return useMemo(() => {
-    return (user?.publicMetadata?.role as Role) ?? defaultRole;
-  }, [user?.publicMetadata?.role, defaultRole]);
+    if (status === "unauthenticated") return defaultRole;
+    return normalizeRole(role);
+  }, [status, role, defaultRole]);
 }

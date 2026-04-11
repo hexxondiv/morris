@@ -1,12 +1,14 @@
 "use client";
 
+// Admin gate: `session.user` and `useCurrentRole()` come from Auth.js; role is resolved from Prisma in the session callback (workstream 03/04).
+
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import { isAuthorized } from "@/lib/utils";
 import { Role } from "@/types/database.types";
 import LogoLoader from "@/components/components/logo-loader";
 import { useSettingsStore } from "@/app/stores/settings";
+import { useCurrentRole, useCurrentSession } from "@/lib/auth-client";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,7 +16,8 @@ interface AdminLayoutProps {
 const REQUIRED_ROLE: Role = "editor";
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const { isLoaded, user } = useUser();
+  const { data: session, status } = useCurrentSession();
+  const userRole = useCurrentRole();
   const router = useRouter();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const { fetchSettings, fetchCategories } = useSettingsStore();
@@ -25,18 +28,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     fetchCategories();
   }, [fetchSettings, fetchCategories]);
 
-  const userRole = useMemo(() => {
-    return (user?.publicMetadata?.role as Role) || "user";
-  }, [user?.publicMetadata?.role]);
-
   const isUserAuthorized = useMemo(() => {
-    return user ? isAuthorized(userRole, REQUIRED_ROLE) : false;
-  }, [user, userRole]);
+    return session?.user ? isAuthorized(userRole, REQUIRED_ROLE) : false;
+  }, [session?.user, userRole]);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (status === "loading") return;
 
-    if (!user) {
+    if (!session?.user) {
       router.push("/sign-in");
       return;
     }
@@ -47,10 +46,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
 
     setHasCheckedAuth(true);
-  }, [isLoaded, user, isUserAuthorized, router]);
+  }, [isUserAuthorized, router, session?.user, status]);
 
-  if (!isLoaded) return <LogoLoader />;
-  if (!user || !isUserAuthorized || !hasCheckedAuth) return <LogoLoader />;
+  if (status === "loading") return <LogoLoader />;
+  if (!session?.user || !isUserAuthorized || !hasCheckedAuth) return <LogoLoader />;
 
   return <div className="min-h-screen w-full">{children}</div>;
 }

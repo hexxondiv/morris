@@ -66,4 +66,4 @@ export interface Vote {
   updated_at: string; // ISO timestamp
 }
 
-export type Role = "admin" | "moderator" | "editor" | "user";
+export type Role = "super_admin" | "admin" | "moderator" | "editor" | "user";

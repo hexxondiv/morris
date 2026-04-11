@@ -1,7 +1,6 @@
 "use client";
 
-import SupabaseProvider from "@/lib/supabase-provider";
-import { redirect, usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Command,
   CommandGroup,
@@ -25,7 +24,6 @@ import {
   FileText,
 } from "lucide-react";
 import Link from "next/link";
-import { SignOutButton, useAuth, useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import logo from "@/images/logo.png";
 import logo_text from "@/images/logo_text.png";
@@ -35,6 +33,7 @@ import { usePageHeader } from "../store";
 import LogoLoader from "@/components/components/logo-loader";
 import { Role } from "@/types/database.types";
 import { Variants } from "framer-motion";
+import { signOutTo, useCurrentSession } from "@/lib/auth-client";
 
 // Navigation configuration
 const NAVIGATION_CONFIG = {
@@ -106,7 +105,7 @@ function NavItem({
 export function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] text-stone-900">
-      <SupabaseProvider>{children}</SupabaseProvider>
+      {children}
     </div>
   );
 }
@@ -119,16 +118,15 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Start closed on mobile
   const [isMobile, setIsMobile] = useState(false);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
-
-  const { userId } = useAuth();
-  const { isLoaded, isSignedIn, user } = useUser();
+  const router = useRouter();
+  const { data: session, status } = useCurrentSession();
   const pathname = usePathname();
   const setHeader = usePageHeader((state) => state.setHeader);
 
   // Memoize user role and admin status
   const userRole = useMemo(() => {
-    return (user?.publicMetadata?.role as Role) || "user";
-  }, [user?.publicMetadata?.role]);
+    return (session?.user?.role as Role) || "user";
+  }, [session?.user?.role]);
 
   const isAdmin = useMemo(() => {
     return userRole !== "user";
@@ -159,21 +157,21 @@ export default function DashboardLayout({
 
   // Handle authentication and routing
   useEffect(() => {
-    if (!isLoaded) return;
+    if (status === "loading") return;
 
-    if (!isSignedIn || !userId) {
-      redirect("/sign-in");
+    if (!session?.user?.id) {
+      router.replace(`/sign-in?callbackUrl=${encodeURIComponent(pathname || "/dashboard")}`);
       return;
     }
 
     // Redirect authenticated users away from sign-in page
     if (pathname === "/sign-in") {
-      redirect("/dashboard");
+      router.replace("/dashboard");
       return;
     }
 
     setHasCheckedAuth(true);
-  }, [isLoaded, isSignedIn, userId, pathname]);
+  }, [pathname, router, session?.user?.id, status]);
 
   // Auto-close sidebar on route change for mobile
   useEffect(() => {
@@ -212,7 +210,7 @@ export default function DashboardLayout({
   };
 
   // Show loader while checking authentication
-  if (!isLoaded || !hasCheckedAuth) {
+  if (status === "loading" || !hasCheckedAuth) {
     return <LogoLoader />;
   }
 
@@ -335,11 +333,12 @@ export default function DashboardLayout({
                   <CommandItem className="flex items-center p-2 rounded-md transition-colors hover:bg-theme-100">
                     <LogOut className="h-4 w-4 mr-3 text-coral-500 flex-shrink-0" />
                     {isSidebarOpen && (
-                      <SignOutButton redirectUrl="/sign-in">
-                        <button className="text-sm font-medium hover:text-coral-600 text-left w-full">
-                          Sign Out
-                        </button>
-                      </SignOutButton>
+                      <button
+                        className="text-sm font-medium hover:text-coral-600 text-left w-full"
+                        onClick={() => signOutTo("/sign-in")}
+                      >
+                        Sign Out
+                      </button>
                     )}
                   </CommandItem>
                 </CommandGroup>
@@ -364,12 +363,14 @@ export default function DashboardLayout({
               {/* User info - could be expanded */}
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-stone-600 hidden sm:inline">
-                  {user?.firstName} {user?.lastName}
+                  {session?.user?.firstName || session?.user?.lastName
+                    ? `${session?.user?.firstName ?? ""} ${session?.user?.lastName ?? ""}`.trim()
+                    : session?.user?.name}
                 </span>
                 <div className="w-8 h-8 bg-theme-100 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-theme-600">
-                    {user?.firstName?.charAt(0)}
-                    {user?.lastName?.charAt(0)}
+                    {(session?.user?.firstName || session?.user?.name || "?").charAt(0)}
+                    {(session?.user?.lastName || "").charAt(0)}
                   </span>
                 </div>
               </div>

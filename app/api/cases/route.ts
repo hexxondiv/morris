@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/clerk";
+import { requireRole } from "@/lib/auth/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 /**

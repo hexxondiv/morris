@@ -5,11 +5,11 @@ import { persist } from 'zustand/middleware';
 
 export interface UserProfile {
   id: string;
-  first_name: string | null; // Allow null to match Supabase
+  first_name: string | null;
   last_name: string | null;
-  email: string; // Non-nullable, as Clerk always provides email
-  role: "user" | "moderator" | "editor" | "admin" | null; // Allow null
-  avatar_url: string | null; // Allow null
+  email: string;
+  role: "user" | "editor" | "moderator" | "admin" | "super_admin" | null;
+  avatar_url: string | null;
   created_at: string;
 }
 

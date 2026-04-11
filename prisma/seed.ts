@@ -76,6 +76,20 @@ const roleCatalog = [
     ],
   },
   {
+    key: "editor",
+    name: "Editor",
+    description: "Content and project authoring for admin surfaces.",
+    sortOrder: 30,
+    permissionKeys: [
+      "projects.read",
+      "projects.manage",
+      "timelines.manage",
+      "events.read",
+      "events.manage",
+      "settings.read",
+    ],
+  },
+  {
     key: "user",
     name: "User",
     description: "Default signed-in member role.",

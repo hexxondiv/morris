@@ -2,12 +2,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { saveProfile } from "@/lib/actions/users";
 
@@ -17,7 +16,7 @@ interface EditProfileFormProps {
     last_name: string;
     avatar_url: string;
     email: string;
-    role: "user" | "moderator" | "editor" | "admin";
+    role: "user" | "moderator" | "editor" | "admin" | "super_admin";
   };
   onCancel: () => void;
   onSave: () => void;
@@ -30,51 +29,14 @@ export function EditProfileForm({ profile, onCancel, onSave }: EditProfileFormPr
     avatar_url: profile.avatar_url,
   });
   const [avatarPreview, setAvatarPreview] = useState<string>(profile.avatar_url);
-  const [isUploading, setIsUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const { userId } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("path", "avatars");
-
-      const res = await fetch(`/api/users/${userId}/upload-avatar`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const result: { url?: string; error?: string } = await res.json();
-
-      if (res.ok && result.url) {
-        setAvatarPreview(result.url);
-        setFormData((prev) => ({ ...prev, avatar_url: result.url ?? ""}));
-      } else {
-        throw new Error(result.error || "Failed to upload avatar");
-      }
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      toast.error(error instanceof Error ? error.message : "Error uploading avatar");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) {
-      toast.error("Please sign in to update your profile");
-      return;
-    }
 
     startTransition(async () => {
       try {
@@ -113,25 +75,10 @@ export function EditProfileForm({ profile, onCancel, onSave }: EditProfileFormPr
             )}
           </div>
           <label
-            htmlFor="avatar-upload"
-            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white text-xs sm:text-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white text-xs sm:text-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
           >
-            <Upload className="h-4 w-4 mr-1" />
-            Upload
+            Avatar uploads move in workstream 07
           </label>
-          <input
-            id="avatar-upload"
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarChange}
-            className="hidden"
-            disabled={isUploading || isPending}
-          />
-          {isUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
-              <Loader2 className="h-6 w-6 text-white animate-spin" />
-            </div>
-          )}
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -145,7 +92,7 @@ export function EditProfileForm({ profile, onCancel, onSave }: EditProfileFormPr
             value={formData.first_name}
             onChange={handleChange}
             className="mt-1 text-xs sm:text-sm bg-theme-50 border-stone-100 text-theme-900 focus:ring-theme-500"
-            disabled={isPending || isUploading}
+            disabled={isPending}
           />
         </div>
         <div>
@@ -158,24 +105,27 @@ export function EditProfileForm({ profile, onCancel, onSave }: EditProfileFormPr
             value={formData.last_name}
             onChange={handleChange}
             className="mt-1 text-xs sm:text-sm bg-theme-50 border-stone-100 text-theme-900 focus:ring-theme-500"
-            disabled={isPending || isUploading}
+            disabled={isPending}
           />
         </div>
       </div>
+      <p className="text-xs text-stone-500">
+        Avatar upload remains deferred to workstream `07-storage-and-file-migration`.
+      </p>
       <div className="flex justify-end gap-3">
         <Button
           type="button"
           variant="outline"
           onClick={onCancel}
           className="text-xs sm:text-sm border-stone-100 text-theme-900 hover:bg-theme-100"
-          disabled={isPending || isUploading}
+          disabled={isPending}
         >
           Cancel
         </Button>
         <Button
           type="submit"
           className="text-xs sm:text-sm bg-theme-500 text-theme-50 hover:bg-theme-600"
-          disabled={isPending || isUploading}
+          disabled={isPending}
         >
           {isPending ? (
             <>

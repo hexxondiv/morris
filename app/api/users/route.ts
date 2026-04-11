@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/clerk";
+import { requireRole } from "@/lib/auth/server";
 import { User } from "@/app/(dashboard)/admin/users/page";
 import { getTotalUserCount } from "@/lib/actions/users";
 import { clerkClient } from "@clerk/nextjs/server";

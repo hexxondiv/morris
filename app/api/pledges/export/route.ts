@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getUserRoleFromClerk } from "@/lib/actions";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { capitalize } from "lodash";
-import { requireRole } from "@/lib/clerk";
+import { requireRole } from "@/lib/auth/server";
 
 export async function GET(request: NextRequest) {
   try {

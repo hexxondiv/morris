@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getUserRoleFromClerk } from "@/lib/actions";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { requireRole } from "@/lib/clerk";
+import { requireRole } from "@/lib/auth/server";
 
 export async function PATCH(
   request: NextRequest,

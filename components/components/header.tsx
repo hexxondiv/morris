@@ -3,13 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/nextjs";
 import logo from "@/images/logo.png";
 import logo_text from "@/images/logo_text.png";
 import { usePathname } from "next/navigation";
@@ -22,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
+import { signInWithGoogle, signOutTo, useCurrentSession } from "@/lib/auth-client";
 
 // Type definitions
 interface NavigationItem {
@@ -142,6 +136,7 @@ const Header: React.FC<HeaderProps> = ({
   className = "",
   hiddenPaths = DEFAULT_HIDDEN_PATHS 
 }) => {
+  const { data: session, status } = useCurrentSession();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [scrollState, setScrollState] = useState<ScrollState>({
     isScrolled: false,
@@ -301,37 +296,42 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Fixed Desktop Auth Area */}
             <div className="hidden lg:flex items-center space-x-3 min-w-[200px] justify-end">
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="px-4 py-2 text-sm font-medium text-theme-700 hover:text-theme-900 hover:bg-theme-50 rounded-lg transition-all duration-200">
+              {status !== "authenticated" ? (
+                <>
+                  <button
+                    className="px-4 py-2 text-sm font-medium text-theme-700 hover:text-theme-900 hover:bg-theme-50 rounded-lg transition-all duration-200"
+                    onClick={() => signInWithGoogle(pathname === "/dashboard" ? "/" : "/dashboard")}
+                  >
                     Sign in
                   </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="bg-theme-500 hover:bg-theme-600 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md">
+                  <button
+                    className="bg-theme-500 hover:bg-theme-600 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                    onClick={() => signInWithGoogle("/dashboard")}
+                  >
                     Join
                   </button>
-                </SignUpButton>
-              </SignedOut>
-
-              <SignedIn>
+                </>
+              ) : (
+                <>
                 <CTAButton
                   href={pathname === "/dashboard" ? "/" : "/dashboard"}
                   className="!text-sm !w-auto flex items-center"
                 >
                   {pathname === "/dashboard" ? "Home" : "Dashboard"}
                 </CTAButton>
-                <div className="ml-2">
-                  <UserButton 
-                    afterSignOutUrl="/"
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-8 h-8"
-                      }
-                    }}
-                  />
+                <div className="ml-2 flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-theme-100 text-theme-700 flex items-center justify-center text-xs font-semibold">
+                    {(session?.user?.firstName || session?.user?.name || "?").charAt(0)}
+                  </div>
+                  <button
+                    className="text-sm font-medium text-theme-700 hover:text-theme-900"
+                    onClick={() => signOutTo("/")}
+                  >
+                    Sign out
+                  </button>
                 </div>
-              </SignedIn>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -423,20 +423,23 @@ const Header: React.FC<HeaderProps> = ({
 
               {/* Auth Section */}
               <div className="pt-4 border-t border-theme-100 mt-6 space-y-2">
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="block w-full text-left px-4 py-3 text-base font-medium text-theme-700 hover:text-theme-900 hover:bg-theme-50 rounded-lg transition-all duration-200">
+                {status !== "authenticated" ? (
+                  <>
+                    <button
+                      className="block w-full text-left px-4 py-3 text-base font-medium text-theme-700 hover:text-theme-900 hover:bg-theme-50 rounded-lg transition-all duration-200"
+                      onClick={() => signInWithGoogle("/dashboard")}
+                    >
                       Sign in
                     </button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <button className="w-full bg-theme-500 hover:bg-theme-600 text-white px-4 py-3 rounded-lg text-base font-semibold transition-all duration-200 shadow-sm">
+                    <button
+                      className="w-full bg-theme-500 hover:bg-theme-600 text-white px-4 py-3 rounded-lg text-base font-semibold transition-all duration-200 shadow-sm"
+                      onClick={() => signInWithGoogle("/dashboard")}
+                    >
                       Join
                     </button>
-                  </SignUpButton>
-                </SignedOut>
-
-                <SignedIn>
+                  </>
+                ) : (
+                  <>
                   <Link
                     href="/dashboard"
                     className="flex px-4 py-3 text-base font-medium text-center items-center text-theme-700 hover:text-theme-900 hover:bg-theme-50 rounded-lg transition-all duration-200"
@@ -444,10 +447,14 @@ const Header: React.FC<HeaderProps> = ({
                   >
                     Dashboard
                   </Link>
-                  <div className="px-4 py-2">
-                    <UserButton afterSignOutUrl="/" />
-                  </div>
-                </SignedIn>
+                  <button
+                    className="w-full text-left px-4 py-3 text-base font-medium text-theme-700 hover:text-theme-900 hover:bg-theme-50 rounded-lg transition-all duration-200"
+                    onClick={() => signOutTo("/")}
+                  >
+                    Sign out
+                  </button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

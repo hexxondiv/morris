@@ -15,9 +15,9 @@ import { capitalize, cn, formatCurrency, isAuthorized } from "@/lib/utils";
 import { useState } from "react";
 import Image from "next/image";
 import TimelineManagement from "@/components/components/timeline/timeline-management";
-import { useUser } from "@clerk/nextjs";
 import { Role } from "@/types/database.types";
 import "@/styles/tiptap-content.scss"
+import { useCurrentRole } from "@/lib/auth-client";
 
 interface ProjectViewProps {
   project: ProjectSchema & { id?: string; slug?: string; body_html?: string };
@@ -426,8 +426,7 @@ export default function ProjectView({
   isAdminView = false,
 }: ProjectViewProps) {
   if (project?.status === "draft" && !isAdminView) return null;
-  const { user } = useUser();
-  const userRole = (user?.publicMetadata?.role as Role) || "user";
+  const userRole = useCurrentRole() as Role;
   isAdminView = isAuthorized(userRole, "moderator");
   // console.log(JSON.stringify(project));
   const showTimeline =

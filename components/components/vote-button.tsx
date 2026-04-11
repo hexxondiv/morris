@@ -4,9 +4,9 @@ import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
-import { useAuth } from "@clerk/nextjs";
 import { saveVote } from "@/lib/actions";
 import { format } from "date-fns";
+import { useCurrentUser } from "@/lib/auth-client";
 
 interface VoteButtonProps {
   projectId: string;
@@ -31,7 +31,7 @@ export function VoteButton({
 }: VoteButtonProps) {
   const [isPending, startTransition] = useTransition();
   const [userVote, setUserVote] = useState(currentVote);
-  const { userId } = useAuth();
+  const user = useCurrentUser();
 
   useEffect(() => {
     setUserVote(currentVote);
@@ -48,7 +48,7 @@ export function VoteButton({
   };
 
   const handleVote = (vote: boolean) => {
-    if (!userId) return toast.error("Please sign in to vote");
+    if (!user?.id) return toast.error("Please sign in to vote");
     if (!canVote) return toast.error("You need a completed donation to vote");
     if (getVotingStatus() !== "open") return toast.error("Voting period is not open");
     if (userVote === vote) return toast.info("You've already voted this way");

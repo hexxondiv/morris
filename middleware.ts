@@ -1,30 +1,67 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+/**
+ * Edge middleware: session presence only (Auth.js cookie names).
+ * Full authentication and role checks run in route handlers via `@/lib/auth/server`.
+ *
+ * Public API prefixes must stay aligned with `app/api` route modules and public pages
+ * that call those endpoints without a session. Data-layer routes still using legacy
+ * Supabase or Clerk inside handlers belong to workstreams 05 and 06; this layer only gates on
+ * cookie presence for `/dashboard`, `/admin`, and `/api` (minus listed public paths).
+ */
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-const isProtectedRoute = createRouteMatcher([
-  "/dashboard(.*)",
-  "/admin(.*)",
-  "/api(.*)",  // Protect all API routes by default
-]);
+function hasSessionCookie(request: NextRequest) {
+  return [
+    "next-auth.session-token",
+    "__Secure-next-auth.session-token",
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+  ].some((cookieName) => request.cookies.has(cookieName));
+}
 
-const isPublicRoute = createRouteMatcher([
-  "/api/open-ledger-metrics(.*)",
-  "/api/marquee-data(.*)",
-  "/api/projects(.*)",
-  "/projects(.*)",
-  "/api/webhooks(.*)",
-  "/api/settings/public(.*)",
-  "/api/cases/create(.*)",
-  "/api/cases/upload(.*)",
-  "/api/states(.*)",
-  "/api/lgas(.*)",
-]);
+function isPublicRoute(pathname: string) {
+  return (
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/open-ledger-metrics") ||
+    pathname.startsWith("/api/marquee-data") ||
+    pathname.startsWith("/api/projects") ||
+    pathname.startsWith("/projects") ||
+    pathname.startsWith("/api/webhooks") ||
+    pathname.startsWith("/api/settings/public") ||
+    pathname.startsWith("/api/cases/create") ||
+    pathname.startsWith("/api/cases/upload") ||
+    pathname.startsWith("/api/states") ||
+    pathname.startsWith("/api/lgas")
+  );
+}
 
-export default clerkMiddleware(async (auth, req) => {
-  // Only protect if it's a protected route AND not a public route
-  if (isProtectedRoute(req) && !isPublicRoute(req)) {
-    await auth.protect();
+function isProtectedRoute(pathname: string) {
+  return (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/api")
+  );
+}
+
+export default function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+
+  if (!isProtectedRoute(pathname) || isPublicRoute(pathname)) {
+    return NextResponse.next();
   }
-});
+
+  if (hasSessionCookie(request)) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const signInUrl = new URL("/sign-in", request.url);
+  signInUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
+  return NextResponse.redirect(signInUrl);
+}
 
 export const config = {
   matcher: [

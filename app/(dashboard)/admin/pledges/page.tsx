@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { fetchPledges } from "@/lib/actions/pledge";
 import { DataTableWrapper } from "@/components/data-table-wrapper";
 import { pledgeColumns } from "@/lib/columns/pledge-columns";
-import { requireRole } from "@/lib/clerk";
+import { requireRole } from "@/lib/auth/server";
 
 export default async function PledgesPage() {
 
