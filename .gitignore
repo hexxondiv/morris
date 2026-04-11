@@ -1,0 +1,63 @@
+# dependencies
+/node_modules/
+
+# Yarn PnP (if you’re not using it you can drop these)
+ /.pnp
+ .pnp.js
+
+# testing
+/coverage/
+
+# next.js build output
+/.next/
+/out/
+
+# production builds (if you produce a /build/)
+ /build/
+
+# caches and temp
+*.cache
+
+# environment / secrets
+.env
+.env.*.local
+/.clerk/
+.env.local 
+.nvmrc
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# certificates / keys
+*.pem
+
+# Vercel
+.vercel/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+
+# Optional: lockfiles are usually committed for reproducible installs, so keep them.
+# (If you have a policy not to, you could add:)
+# /package-lock.json
+# /pnpm-lock.yaml
+# /yarn.lock
+
+/others/
+modified:   .env.example
+app/user_id_mapping.json
+data.sql
+full_dump.sql
+prod_data.sql
+schema.sql
+settings-backup.json
