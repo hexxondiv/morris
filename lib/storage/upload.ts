@@ -1,31 +1,36 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { getResolvedStorageEnv } from "./config";
-import { getS3CompatibleClient } from "./s3-client";
-import { publicObjectUrl } from "./public-url";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
+import { publicUploadUrl } from "./public-url";
 import type { UploadPublicObjectInput, UploadPublicObjectResult } from "./types";
 
+const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
+
+function resolvedFilePath(objectKey: string): string {
+  const key = objectKey.replace(/^\/+/, "");
+  if (!key || key.includes("..")) {
+    throw new Error("Invalid object key");
+  }
+  const root = path.resolve(UPLOAD_ROOT);
+  const full = path.resolve(root, key);
+  if (full !== root && !full.startsWith(root + path.sep)) {
+    throw new Error("Invalid object key");
+  }
+  return full;
+}
+
 /**
- * Server-side upload to the configured S3-compatible bucket. Caller must enforce authz.
- * Public readability is expected via CDN / bucket policy on `S3_PUBLIC_BASE_URL`, not object ACLs.
+ * Writes to `public/uploads/{objectKey}`. Caller must enforce authz.
+ * Files are served statically at `/uploads/{objectKey}`.
  */
 export async function uploadPublicObject(
   input: UploadPublicObjectInput
 ): Promise<UploadPublicObjectResult> {
-  const env = getResolvedStorageEnv();
-  const client = getS3CompatibleClient(env);
-
-  await client.send(
-    new PutObjectCommand({
-      Bucket: env.bucket,
-      Key: input.objectKey,
-      Body: input.body,
-      ContentType: input.contentType,
-      CacheControl: input.cacheControl ?? "public, max-age=31536000, immutable",
-    })
-  );
+  const filePath = resolvedFilePath(input.objectKey);
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, input.body);
 
   return {
-    objectKey: input.objectKey,
-    publicUrl: publicObjectUrl(env.publicBaseUrl, input.objectKey),
+    objectKey: input.objectKey.replace(/^\/+/, ""),
+    publicUrl: publicUploadUrl(input.objectKey),
   };
 }

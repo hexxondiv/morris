@@ -1,20 +1,4 @@
 /** @type {import('next').NextConfig} */
-function storageImageRemotePattern() {
-  const base = process.env.S3_PUBLIC_BASE_URL;
-  if (!base) return null;
-  try {
-    const u = new URL(base);
-    const protocol = u.protocol.replace(":", "");
-    if (protocol !== "http" && protocol !== "https") return null;
-    return {
-      protocol,
-      hostname: u.hostname,
-      port: u.port || "",
-    };
-  } catch {
-    return null;
-  }
-}
 
 const remotePatterns = [
   {
@@ -48,11 +32,6 @@ const remotePatterns = [
     port: "",
   },
 ];
-
-const storagePattern = storageImageRemotePattern();
-if (storagePattern) {
-  remotePatterns.push(storagePattern);
-}
 
 const nextConfig = {
   images: {

@@ -88,13 +88,6 @@ const TeamCarousel: React.FC<TeamCarouselProps> = ({ className = "" }) => {
         variants={staggerContainer}
       >
         <div className="mx-auto">
-          <motion.h2
-            className="text-4xl md:text-5xl font-bold px-4 text-center pb-8 text-theme-900"
-            variants={fadeInUp}
-          >
-            Meet the team
-          </motion.h2>
-
           <motion.div className="relative" variants={fadeInUp}>
             <Swiper
               modules={[Autoplay, EffectCoverflow]}

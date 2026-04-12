@@ -7,7 +7,7 @@ export default function Projects() {
       initialStatuses={["proposed", "voting", "active", "completed"]}
       isAdminView={false}
       title="Discover Projects"
-      subtitle="Explore innovative projects making a difference in communities across Nigeria"
+      subtitle="Explore projects making a tangible difference in Aniocha North, Delta State."
       allowStatusFilter={true}
       allowSearch={true}
       allowViewModeToggle={false}

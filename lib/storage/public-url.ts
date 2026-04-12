@@ -1,9 +1,8 @@
 /**
- * Builds a browser-usable URL for an object stored with a public CDN or bucket website base.
- * `publicBaseUrl` must not include a trailing slash (normalized by callers).
+ * Public URL path for a file stored at `public/uploads/{objectKey}`.
+ * Next.js serves `public/` at the site root, so `/uploads/...` resolves correctly.
  */
-export function publicObjectUrl(publicBaseUrl: string, objectKey: string): string {
-  const base = publicBaseUrl.replace(/\/+$/, "");
-  const key = objectKey.replace(/^\/+/, "");
-  return `${base}/${key}`;
+export function publicUploadUrl(objectKey: string): string {
+  const key = objectKey.replace(/^\/+/, "").replace(/\/+/g, "/");
+  return `/uploads/${key}`;
 }

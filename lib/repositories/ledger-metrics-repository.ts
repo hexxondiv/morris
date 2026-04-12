@@ -1,8 +1,10 @@
+import type { Prisma } from "@prisma/client";
 import {
   PledgeType,
   ProjectStatus,
   SettingDataType,
   TransactionDirection,
+  TransactionKind,
   TransactionStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -27,18 +29,74 @@ async function strSetting(key: string, fallback: string): Promise<string> {
   return v != null ? String(v) : fallback;
 }
 
+type LedgerSnapshotForMarquee = Pick<
+  Awaited<ReturnType<typeof getOpenLedgerMetricsPayload>>,
+  | "active_villagers"
+  | "monthly_contributions"
+  | "cash_on_hand"
+  | "monthly_operational_costs"
+  | "cash_deployed"
+>;
+
+function metricAmountForMarquee(
+  metricKey: string,
+  ledger: LedgerSnapshotForMarquee
+): number | null {
+  switch (metricKey) {
+    case "active_villagers":
+      return ledger.active_villagers;
+    case "monthly_contributions":
+      return ledger.monthly_contributions;
+    case "cash_on_hand":
+      return ledger.cash_on_hand;
+    case "monthly_operational_costs":
+    case "monthly_fixed_costs":
+      return ledger.monthly_operational_costs;
+    case "cash_deployed":
+      return ledger.cash_deployed;
+    default:
+      return null;
+  }
+}
+
 export async function getMarqueePayload() {
   const defaultCurrency = await strSetting("default_currency", "NGN");
   const raw = await findActiveSettingByKey("marquee_featured_items");
   if (raw && raw.dataType === SettingDataType.JSON) {
     const parsed = castJsonValue(raw.value, SettingDataType.JSON);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      const items = parsed
+      let items: Record<string, unknown>[] = parsed
         .filter((x: unknown) => x && typeof (x as { id?: string }).id === "string")
         .map((x: Record<string, unknown>, i: number) => ({
           ...x,
           order: typeof x.order === "number" ? x.order : i,
         }));
+
+      const hasMetricTile = items.some((row) => row.type === "metric");
+      if (hasMetricTile) {
+        const ledger = await getOpenLedgerMetricsPayload();
+        items = items.map((row) => {
+          if (row.type !== "metric") return row;
+          const key =
+            (typeof row.metric_type === "string" && row.metric_type) ||
+            (typeof row.id === "string" ? row.id : "");
+          if (!key) return row;
+          const amount = metricAmountForMarquee(key, ledger);
+          if (amount === null) return row;
+          const href =
+            typeof row.href === "string" && row.href.length > 0
+              ? row.href
+              : "/public-ledger";
+          return {
+            ...row,
+            href,
+            metric_type: typeof row.metric_type === "string" ? row.metric_type : key,
+            /** Plain number string so client parseFloat is exact (admin tiles omit value). */
+            value: String(amount),
+          };
+        });
+      }
+
       return { items, default_currency: defaultCurrency };
     }
   }
@@ -92,6 +150,35 @@ export async function getOpenLedgerMetricsPayload() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  /** Effective booked time: postedAt ?? paidAt ?? createdAt (many pledge rows never set postedAt). */
+  const contributionsThisMonthWhere: Prisma.TransactionWhereInput = {
+    status: TransactionStatus.COMPLETED,
+    direction: TransactionDirection.CREDIT,
+    kind: { in: [TransactionKind.PLEDGE, TransactionKind.DONATION] },
+    OR: [
+      {
+        AND: [
+          { postedAt: { not: null } },
+          { postedAt: { gte: monthStart } },
+        ],
+      },
+      {
+        AND: [
+          { postedAt: null },
+          { paidAt: { not: null } },
+          { paidAt: { gte: monthStart } },
+        ],
+      },
+      {
+        AND: [
+          { postedAt: null },
+          { paidAt: null },
+          { createdAt: { gte: monthStart } },
+        ],
+      },
+    ],
+  };
+
   const [
     activeVillagers,
     monthlyRows,
@@ -117,11 +204,7 @@ export async function getOpenLedgerMetricsPayload() {
       },
     }),
     prisma.transaction.aggregate({
-      where: {
-        status: TransactionStatus.COMPLETED,
-        postedAt: { gte: monthStart },
-        direction: TransactionDirection.CREDIT,
-      },
+      where: contributionsThisMonthWhere,
       _sum: { amount: true },
     }),
     prisma.transaction.aggregate({
@@ -185,7 +268,7 @@ export async function getOpenLedgerMetricsPayload() {
 
   const active_villagers = manualVillagers || activeVillagers;
   const monthly_contributions =
-    manualMonthly || dec(monthlyRows._sum.amount);
+    manualMonthly || dec(monthlyRows._sum?.amount);
   const cash_on_hand = manualCash || dec(cashCredits._sum.amount) - dec(cashDebits._sum.amount);
   const monthly_operational_costs = manualOps;
   const cash_deployed = manualDeployed || dec(cashDebits._sum.amount);

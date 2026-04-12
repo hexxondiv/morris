@@ -1,6 +1,6 @@
 # Environment Reference
 
-Sanitized baseline for the **post–workstream 09** runtime: Auth.js, Prisma/MySQL, and S3-compatible storage. Legacy Clerk and Supabase **application** variables are removed; optional **operator-only** variables for the migration CLI are listed under “Offline migration”.
+Sanitized baseline for the **post–workstream 09** runtime: Auth.js, Prisma/MySQL, and on-disk uploads under `public/uploads/`. Legacy Clerk and Supabase **application** variables are removed; optional **operator-only** variables for the migration CLI are listed under “Offline migration”.
 
 ## Application (required for normal operation)
 
@@ -29,31 +29,9 @@ Used by `prisma/seed.ts` / `npm run db:bootstrap-super-admin` so at least one `s
 
 - `DATABASE_URL` — MySQL connection string for Prisma.
 
-### S3-compatible object storage
+### File uploads
 
-- `STORAGE_PROVIDER` — `s3` (default) or `r2` (both use the S3 API).
-- `S3_BUCKET`
-- `S3_REGION` — use `auto` for Cloudflare R2 where appropriate. For MinIO, `us-east-1` is fine if the server does not enforce region.
-- `S3_ENDPOINT` — required for R2/MinIO/custom endpoints; omit for default AWS regional endpoints.
-- `S3_ACCESS_KEY_ID`
-- `S3_SECRET_ACCESS_KEY`
-- `S3_PUBLIC_BASE_URL` — prefix used when persisting object URLs (see `lib/storage/public-url.ts`): **no trailing slash**. For **MinIO with path-style** access, this is usually `https://<host>:<port>/<bucket>` so that `/{objectKey}` appended matches MinIO’s public object path (`/bucket/key`).
-- `S3_FORCE_PATH_STYLE` — set to `true` for **MinIO** and many self-hosted S3-compatible servers.
-
-#### MinIO (local or LAN)
-
-1. Create a bucket (e.g. `morris`) in the MinIO console and, for public images used by the web app, attach a **read-only anonymous** policy on that bucket (or terminate TLS at a reverse proxy that serves objects under a stable HTTPS host).
-2. Point `S3_ENDPOINT` at the **S3 API** listener (often port `9000`), not the console port (`9001`).
-3. Example (adjust host, bucket, and credentials if you changed MinIO root user):
-
-   - `S3_ENDPOINT=https://192.168.1.15:9000`
-   - `S3_FORCE_PATH_STYLE=true`
-   - `S3_BUCKET=morris`
-   - `S3_PUBLIC_BASE_URL=https://192.168.1.15:9000/morris`
-
-4. If the MinIO API uses a **self-signed** certificate, Node may reject TLS until the cert is trusted system-wide or you terminate TLS on a trusted reverse proxy. Avoid disabling TLS verification in production.
-
-`next.config.js` adds a `next/image` **remotePatterns** entry from `S3_PUBLIC_BASE_URL` at build time, so restart the dev server after changing storage env vars.
+Upload APIs write under `public/uploads/` and return same-origin paths such as `/uploads/images/...`. No storage-related environment variables are required. Ensure the deploy user can write to `public/uploads/` and that you back up or sync that directory if you rely on uploaded files in production.
 
 ### Payments (SwitchApp)
 
@@ -74,6 +52,7 @@ The following are **no longer** read by production code:
 
 - Clerk: `NEXT_PUBLIC_CLERK_*`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET`
 - Supabase JS client: `NEXT_PUBLIC_SUPABASE_ANON_KEY` and app use of `SUPABASE_SERVICE_ROLE_KEY`
+- Object storage: `STORAGE_PROVIDER`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_BASE_URL`, `S3_FORCE_PATH_STYLE` (uploads use `public/uploads/` instead)
 
 ## Notes
 

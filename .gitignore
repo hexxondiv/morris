@@ -46,6 +46,29 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# public/uploads: commit .gitkeep layout only; ignore uploaded files
+# (Negated parent dirs so nested .gitkeep files are not excluded by /public/uploads/*)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+!/public/uploads/images/
+!/public/uploads/images/.gitkeep
+
+!/public/uploads/images/misc/
+/public/uploads/images/misc/*
+!/public/uploads/images/misc/.gitkeep
+
+!/public/uploads/images/cases/
+/public/uploads/images/cases/*
+!/public/uploads/images/cases/.gitkeep
+
+!/public/uploads/images/avatars/
+/public/uploads/images/avatars/*
+!/public/uploads/images/avatars/.gitkeep
+
+!/public/uploads/images/project-covers/
+/public/uploads/images/project-covers/*
+!/public/uploads/images/project-covers/.gitkeep
 
 # Optional: lockfiles are usually committed for reproducible installs, so keep them.
 # (If you have a policy not to, you could add:)

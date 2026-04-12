@@ -12,7 +12,7 @@ export function sanitizeFolderPrefix(raw: string | null | undefined): string | n
 }
 
 /**
- * Canonical key layout (mirrors former Supabase `images` bucket paths):
+ * Canonical key layout under `public/uploads/`:
  * - Project / generic uploads: `images/{folder}/{timestamp}.{ext}`
  * - Case evidence: `images/cases/{timestamp}-{rand}.{ext}`
  * - Avatars: `images/avatars/{userId}/{timestamp}.{ext}`

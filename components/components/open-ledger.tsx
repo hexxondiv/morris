@@ -175,7 +175,7 @@ export default function OpenLedger() {
           </div>
           <CTAButton href="/dashboard">Get started</CTAButton>
           <div className="block text-center text-size-lg font-medium text-mud-800">
-            Already a villager?{" "}
+            Already a member?{" "}
             <Link
               href="/sign-in"
               className="font-medium underline underline-offset-1"

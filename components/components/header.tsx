@@ -114,7 +114,7 @@ const mainNavigation: NavigationItem[] = [
   { label: "About", href: "/about" },
   { label: "Projects", href: "/projects" },
   { label: "Ledger", href: "/public-ledger" },
-  { label: "Request for help", href: "/report" },
+  // { label: "Request for help", href: "/report" },
 ];
 
 /**

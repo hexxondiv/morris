@@ -1,25 +1,13 @@
-export type StorageProvider = "s3" | "r2";
-
-export type ResolvedStorageEnv = {
-  provider: StorageProvider;
-  bucket: string;
-  region: string;
-  endpoint: string | undefined;
-  accessKeyId: string;
-  secretAccessKey: string;
-  publicBaseUrl: string;
-  forcePathStyle: boolean;
-};
-
 export type UploadPublicObjectInput = {
-  /** Object key inside the configured bucket (no leading slash), e.g. `images/cases/abc.jpg`. */
+  /** Relative path under `public/uploads/` (no leading slash), e.g. `images/cases/abc.jpg`. */
   objectKey: string;
   body: Buffer;
+  /** Recorded for API compatibility; local writes do not attach HTTP metadata to files. */
   contentType: string;
-  cacheControl?: string;
 };
 
 export type UploadPublicObjectResult = {
   objectKey: string;
+  /** Same-origin URL path, e.g. `/uploads/images/cases/abc.jpg`. */
   publicUrl: string;
 };

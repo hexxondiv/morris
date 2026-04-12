@@ -36,8 +36,9 @@ export default function ProjectsSection() {
             Our <span className="text-theme-500">Projects</span>
           </h2>
           <p className="text-xl text-stone-200 max-w-2xl mx-auto mb-8">
-            Discover innovative projects making a difference in communities
-            across Nigeria
+            Discover practical projects funded for Aniocha North, Delta
+            State—schools, livelihoods, and community assets your support can
+            move forward.
           </p>
           <Link
             href="/projects"
@@ -67,7 +68,7 @@ export default function ProjectsSection() {
         <div className="mt-16">
           <Metrics
             message="Trust. Transparency. Results"
-            buttonInfo={{ href: "/sign-in", text: "Join the village" }}
+            buttonInfo={{ href: "/sign-in", text: "Join the campaign" }}
           />
         </div>
       </div>

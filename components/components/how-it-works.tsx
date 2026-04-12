@@ -10,7 +10,7 @@ type Props = {
 
 const howItWorkSteps = [
   {
-    title: 'Step 1 - Join our village',
+    title: 'Step 1 - Join our campaign',
     description:
       "Contribute a daily or monthly pledge to power community projects, local initiatives, and transparent impact in line with our shared values.",
   },
@@ -57,9 +57,7 @@ export default function HowItWorks() {
     <section className="bg-mud-50 pb-8 pt-16 sm:pb-12 sm:pt-24 bg-old-lace">
       <div id="metrics" className="container px-6 sm:px-4 mx-auto">
         <h2 className="text-center section-header">
-          How MORRIS MONYE
-          <br />
-          works
+          How MORRIS works
         </h2>
 
         <div className="mx-auto mt-12 mb-8 grid max-w-sm gap-8 sm:mb-16 sm:max-w-6xl sm:grid-cols-2 lg:grid-cols-3">

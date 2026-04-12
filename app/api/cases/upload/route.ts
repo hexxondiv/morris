@@ -8,10 +8,9 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
  * POST /api/cases/upload
  * Handles multiple image uploads for case reports (public; no session required).
  *
- * **Transactional note (workstream 06):** Objects are committed to object storage here; the
- * caller then submits `/api/cases/create` which persists `case_files.file_url` in a Prisma
- * `$transaction`. If the case create fails after a successful upload, storage objects may be
- * orphaned until a cleanup job or workstream `08` backfill reconciles them.
+ * **Transactional note:** Files are written to `public/uploads/` here; the caller then
+ * submits `/api/cases/create` which persists `case_files.file_url`. If create fails after
+ * upload, files may remain on disk until cleaned up manually or by a future job.
  */
 export async function POST(request: Request) {
   try {

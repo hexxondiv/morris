@@ -25,12 +25,12 @@ const faqs = [
   {
     question: "How does MORRIS MONYE select and vet project partners?",
     answer:
-      "We use a rigorous selection process that includes background checks, past work assessments, and alignment with our mission.",
+      "We use a rigorous selection process—background checks, past work assessments, and alignment with our mission—with a clear bias toward measurable outcomes in Aniocha North.",
   },
   {
     question: "How does MORRIS MONYE ensure transparent fund and project management?",
     answer:
-      "We publish regular reports, use third-party audits, and provide member access to financial breakdowns.",
+      "We publish regular reports, use third-party audits, and give members access to financial breakdowns and the public ledger so money raised for Aniocha North stays traceable.",
   },
 ];
 
@@ -42,7 +42,7 @@ export default function FAQSection() {
 
         <Metrics
           message="Trust. Transparency. Results"
-          buttonInfo={{ href: "/signin", text: "Join the village" }}
+          buttonInfo={{ href: "/signin", text: "Join the campaign" }}
         />
       </div>
     </section>

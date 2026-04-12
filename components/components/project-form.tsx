@@ -410,7 +410,7 @@ export default function ProjectForm({ project, onClose }: ProjectFormProps) {
       description: project?.description || "",
       goal_amount: project?.goal_amount || 0,
       status: project?.status || "draft",
-      state: project?.state || null,
+      state: project ? (project.state ?? "") : "delta",
       country: project?.country || null,
       sector: project?.sector || null,
       cover_image: project?.cover_image || undefined,
@@ -741,6 +741,7 @@ export default function ProjectForm({ project, onClose }: ProjectFormProps) {
                         </option>
                         <option value="abia">Abia</option>
                         <option value="anambra">Anambra</option>
+                        <option value="delta">Delta State</option>
                         <option value="ebonyi">Ebonyi</option>
                         <option value="enugu">Enugu</option>
                         <option value="imo">Imo</option>
@@ -802,6 +803,7 @@ export default function ProjectForm({ project, onClose }: ProjectFormProps) {
                         )}
                       >
                         <option value="education">Education</option>
+                        <option value="politics">Politics</option>
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-theme-400 dark:text-theme-500" />
                     </div>

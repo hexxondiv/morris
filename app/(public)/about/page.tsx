@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -13,18 +13,70 @@ import { toast } from "sonner";
 import SocialShareButtons from "@/components/share-button";
 import { fadeIn, fadeInUp, staggerContainer, scaleIn, slideInFromLeft, slideInFromRight } from "@/lib/animations";
 import { FAQ } from "@/components/components/faq-section";
-import TeamCarousel from "@/components/components/team-carousel";
 import { useSetting } from "@/hooks/use-settings";
 
-// Type definitions
-interface TeamMember {
-  name: string;
-  role: string;
-  image: string;
-  linkedin: string;
-}
+type ActiveProjectPreview = {
+  id: string;
+  title: string;
+  slug: string;
+  goal_amount: number;
+  current_amount: number;
+};
 
 const AboutUs: React.FC = () => {
+  const [activeProject, setActiveProject] = useState<ActiveProjectPreview | null>(
+    null
+  );
+  const [activeProjectLoading, setActiveProjectLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const params = new URLSearchParams({
+          page: "1",
+          limit: "1",
+          statuses: "active",
+          paginate: "true",
+          sortBy: "updated_at",
+          sortOrder: "desc",
+        });
+        const res = await fetch(`/api/projects?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to load projects");
+        const json = (await res.json()) as {
+          data?: Record<string, unknown>[];
+        };
+        const first = json.data?.[0];
+        if (
+          first &&
+          typeof first.title === "string" &&
+          typeof first.slug === "string" &&
+          typeof first.id === "string"
+        ) {
+          const goal = Number(first.goal_amount);
+          const current = Number(first.current_amount ?? 0);
+          if (!cancelled) {
+            setActiveProject({
+              id: first.id,
+              title: first.title,
+              slug: first.slug,
+              goal_amount: Number.isFinite(goal) ? goal : 0,
+              current_amount: Number.isFinite(current) ? current : 0,
+            });
+          }
+        } else if (!cancelled) {
+          setActiveProject(null);
+        }
+      } catch {
+        if (!cancelled) setActiveProject(null);
+      } finally {
+        if (!cancelled) setActiveProjectLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const FootstepDecoration: React.FC = () => (
     <motion.section
       className="flex justify-center"
@@ -77,26 +129,22 @@ const AboutUs: React.FC = () => {
           animate="visible"
           variants={fadeInUp}
         >
-          <div className="mx-auto mt-6 max-w-3xl py-24 md:mt-12">
+          <div className="mx-auto mt-6 max-w-3xl py-12 md:mt-10 md:py-16">
             <motion.h1
-              className="text-4xl md:text-5xl lg:text-6xl font-bold px-4 text-center"
+              className="text-4xl md:text-5xl lg:text-6xl font-bold px-4 text-center leading-snug lg:leading-tight"
               variants={fadeInUp}
               transition={{ delay: 0.2 }}
             >
-              <span className="leading-[100px">
-                MORRIS MONYE brings both Nigerians and the diaspora together to fund impactful development across South-Eastern Nigeria.
-              </span>
+              MORRIS brings people at home and in the diaspora together to fund
+              practical development in Aniocha North, Delta State—where
+              transparent giving meets local priorities.
             </motion.h1>
           </div>
         </motion.section>
 
         <FootstepDecoration />
 
-{/* Team Section */}
-        <TeamCarousel />
-        <FootstepDecoration />
-
-        {/* How MORRIS MONYE Works */}
+        {/* How MORRIS works */}
         <motion.section
           initial="hidden"
           whileInView="visible"
@@ -105,7 +153,7 @@ const AboutUs: React.FC = () => {
         >
           <div className="mx-auto max-w-2xl py-24">
             <p className="text-4xl md:text-5xl font-bold px-4 text-center">
-              How MORRIS MONYE works
+              How MORRIS works
             </p>
           </div>
         </motion.section>
@@ -132,8 +180,9 @@ const AboutUs: React.FC = () => {
                 variants={fadeInUp}
               >
                 Join us by making a monthly pledge of at least{" "}
-                {formatCurrency(PLEDGE_MINIMUM_AMOUNT ?? 5000)}. This contribution funds projects and
-                grants you voting rights.
+                {formatCurrency(PLEDGE_MINIMUM_AMOUNT ?? 5000)}. That contribution
+                backs vetted projects in Aniocha North and grants you voting
+                rights on how funds move.
               </motion.p>
               <motion.div
                 className="bg-white rounded-2xl shadow-lg p-6 mx-auto max-w-xl border border-theme-100"
@@ -146,7 +195,8 @@ const AboutUs: React.FC = () => {
                   <div className="text-left">
                     <p className="text-xl font-medium text-theme-900">Onoh</p>
                     <p className="font-medium text-theme-700">
-                      Welcome to the village. You now have voting rights.
+                      Welcome aboard—you now have voting rights on Aniocha North
+                      funding decisions.
                     </p>
                   </div>
                 </div>
@@ -176,38 +226,85 @@ const AboutUs: React.FC = () => {
                 className="text-4xl md:text-5xl font-bold px-4"
                 variants={fadeInUp}
               >
-                Members can track project progress and get real-time updates
-                from the field.
+                Follow Monye&apos;s projects from pledge to delivery with
+                updates you can trace in the open ledger.
               </motion.p>
               <motion.div
                 className="bg-white rounded-2xl shadow-lg p-6 mx-auto max-w-lg border border-theme-100"
                 variants={slideInFromRight}
               >
-                <div className="space-y-4 text-left">
+                {activeProjectLoading ? (
+                  <div className="space-y-4 text-left animate-pulse">
+                    <div className="h-8 w-32 rounded-full bg-theme-100" />
+                    <div className="h-7 w-full max-w-md rounded bg-theme-100" />
+                    <div className="h-4 w-48 rounded bg-theme-50" />
+                    <div className="h-2 w-full overflow-hidden bg-theme-50 rounded-full">
+                      <div className="h-2 w-1/3 rounded-full bg-theme-200" />
+                    </div>
+                    <div className="h-10 w-32 rounded-lg bg-theme-100" />
+                  </div>
+                ) : activeProject ? (
+                  <div className="space-y-4 text-left">
                     <div className="flex items-center gap-2 bg-white/30 w-fit backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-theme-100">
                       <div className="rounded-full bg-lime w-2 h-2 animate-pulse" />
                       <span className="text-sm font-medium text-theme-900">
-                        In Progress
+                        Active
                       </span>
                     </div>
-                  <div className="text-xl font-medium">
-                    Renovating a state library in Onitsha
-                  </div>
-                  <div>
-                    <div className="text-theme-700 block mb-4">est. 4 month completion</div>
-                    <div className="h-2 w-full overflow-hidden bg-theme-50 rounded-full mb-2">
-                      <motion.div
-                        className="h-2 rounded-full bg-gradient-to-r from-theme-500 to-theme-600 transition-all duration-700 ease-in-out"
-                        initial={{ width: 0 }}
-                        whileInView={{ width: "65%" }}
-                        transition={{ duration: 1.2, delay: 0.5 }}
-                      />
+                    <div className="text-xl font-medium text-theme-900">
+                      {activeProject.title}
                     </div>
+                    <div>
+                      <div className="text-theme-700 block mb-4 text-sm">
+                        {formatCurrency(activeProject.current_amount)} raised of{" "}
+                        {formatCurrency(activeProject.goal_amount)} goal
+                      </div>
+                      <div className="h-2 w-full overflow-hidden bg-theme-50 rounded-full mb-2">
+                        <motion.div
+                          className="h-2 rounded-full bg-gradient-to-r from-theme-500 to-theme-600 transition-all duration-700 ease-in-out"
+                          initial={{ width: 0 }}
+                          whileInView={{
+                            width: `${
+                              activeProject.goal_amount > 0
+                                ? Math.min(
+                                    100,
+                                    (activeProject.current_amount /
+                                      activeProject.goal_amount) *
+                                      100
+                                  )
+                                : 0
+                            }%`,
+                          }}
+                          transition={{ duration: 1.2, delay: 0.5 }}
+                        />
+                      </div>
+                    </div>
+                    <Link
+                      href={`/projects/${activeProject.slug}`}
+                      className="inline-flex bg-theme-100 hover:bg-theme-200 text-theme-800 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      View project
+                    </Link>
                   </div>
-                  <button className="bg-theme-100 hover:bg-theme-200 text-theme-800 px-4 py-2 rounded-lg transition-colors">
-                    View project
-                  </button>
-                </div>
+                ) : (
+                  <div className="space-y-4 text-center sm:text-left">
+                    <div className="flex items-center gap-2 bg-theme-50 w-fit mx-auto sm:mx-0 rounded-full px-4 py-2 border border-theme-100">
+                      <span className="text-sm font-medium text-theme-700">
+                        No active project
+                      </span>
+                    </div>
+                    <p className="text-theme-700 text-sm leading-relaxed">
+                      There isn&apos;t an active project to highlight right now.
+                      Browse all projects to see what&apos;s live or coming up.
+                    </p>
+                    <Link
+                      href="/projects"
+                      className="inline-flex bg-theme-100 hover:bg-theme-200 text-theme-800 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      Browse projects
+                    </Link>
+                  </div>
+                )}
               </motion.div>
             </div>
           </div>
@@ -234,7 +331,9 @@ const AboutUs: React.FC = () => {
                 className="text-4xl md:text-5xl font-bold px-4 md:leading-normal"
                 variants={fadeInUp}
               >
-               Voting sessions are held to approve key funding decisions. Members gain voting rights with at least one kind donation, inviting all to shape our impact.
+                Voting sessions decide major releases from the fund. Members who
+                give at least one qualifying donation help steer impact where it
+                counts—in Aniocha North communities.
               </motion.p>
               <motion.div
                 className="bg-white rounded-2xl shadow-lg p-6 mx-auto max-w-lg border border-theme-100"
@@ -248,8 +347,9 @@ const AboutUs: React.FC = () => {
                       </span>
                     </div>
                   <div className="text-xl font-medium">
-                    We've drafted a proposal to use {formatCurrency(13500000)} from our fund to
-                    build an artisan school in 🇳🇬 Abakiliki, Nigeria.
+                    We&apos;ve drafted a proposal to use{" "}
+                    {formatCurrency(13500000)} from our fund to stand up an
+                    artisan training space in Aniocha North, Delta State.
                   </div>
                   <VoteButton
                     projectId=""
@@ -292,8 +392,8 @@ const AboutUs: React.FC = () => {
                 className="text-4xl md:text-5xl font-bold px-4"
                 variants={fadeInUp}
               >
-                All finances and every transaction are accounted for in a public
-                ledger.
+                Every naira committed to Aniocha North work is accounted for in a
+                public ledger you can inspect.
               </motion.p>
               <motion.div
                 className="bg-white rounded-2xl shadow-lg mx-auto max-w-3xl text-left border border-theme-100 overflow-hidden"
@@ -302,7 +402,7 @@ const AboutUs: React.FC = () => {
                 <div className="divide-y divide-dashed divide-theme-200">
                   {[
                     {
-                      label: "Funding to Stem Anambra Workshop",
+                      label: "Funding to Aniocha North youth skills workshop",
                       amount: 3109000,
                       color: "text-coral-500",
                       sign: "-"
@@ -314,8 +414,8 @@ const AboutUs: React.FC = () => {
                       sign: "-"
                     },
                     {
-                      label: "Villager contributions",
-                      amount: 64562.00,
+                      label: "Member contributions (Aniocha North fund)",
+                      amount: 64562.0,
                       color: "text-lime",
                       sign: "+"
                     },
@@ -357,8 +457,9 @@ const AboutUs: React.FC = () => {
                 className="text-4xl md:text-5xl font-bold"
                 variants={fadeInUp}
               >
-                We plan to build a global community of people and tap into
-                the enormous power of collective philanthropy.
+                We are widening the circle of people who care about Aniocha
+                North—near and far—and putting collective philanthropy to work on
+                the priorities residents set together.
               </motion.p>
               <motion.div className="space-y-6" variants={staggerContainer}>
                 <motion.div variants={slideInFromLeft}>

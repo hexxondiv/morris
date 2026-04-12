@@ -44,7 +44,7 @@ const Footer: React.FC<FooterProps> = ({
     {
       title: "Get involved",
       links: [
-        { href: "/sign-in", label: "Join the village", external: false },
+        { href: "/sign-in", label: "Join the campaign", external: false },
         { href: "/pledge", label: "Make a one-time gift" },
         // { href: "/blog", label: "Our blog" },
         { href: "/#faqs", label: "FAQs" },
@@ -54,14 +54,14 @@ const Footer: React.FC<FooterProps> = ({
       title: "Impact",
       links: [
         { href: "/projects", label: "Projects" },
-        { href: "/donations", label: "Donations" },
+        { href: "/public-ledger", label: "Ledger" },
         // { href: "/reports/q1-2025", label: "Impact report" },
       ],
     },
     {
       title: "About & Legal",
       links: [
-        { href: "/about", label: "How MORRIS MONYE works" },
+        { href: "/about", label: "How MORRIS works" },
         // { href: "/finances", label: "Financial ledger" },
         // { href: "/terms", label: "Terms of service" },
         // { href: "/privacy", label: "Privacy policy" },
@@ -103,7 +103,7 @@ const Footer: React.FC<FooterProps> = ({
             </h2>
 
             <div className="space-y-6 mx-auto max-w-sm">
-              <CTAButton href="/sign-in">Join the village</CTAButton>
+              <CTAButton href="/sign-in">Join the campaign</CTAButton>
               <CTAButton
                 href="/pledge"
                 className="!button-secondary bg-white hover:bg-theme-50 border border-theme-200 text-theme-700 hover:text-theme-900 flex items-center justify-center transition-colors"
@@ -111,7 +111,7 @@ const Footer: React.FC<FooterProps> = ({
                 Make a one-time gift
               </CTAButton>
               <div className="block pt-3 pb-4 sm:pt-6 text-center text-lg font-medium text-theme-800">
-                Already a villager?{" "}
+                Already a member?{" "}
                 <Link
                   href="/sign-in"
                   className="font-medium text-theme-500 hover:text-theme-600 underline underline-offset-2 transition-colors"

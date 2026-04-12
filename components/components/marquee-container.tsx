@@ -25,6 +25,8 @@ import MarqueeLoadingSkeleton from "./loading-skeletons";
 
 interface MarqueeItemProps {
   item: MarqueeItemType;
+  /** From `/api/marquee-data` `default_currency`; avoids hard-coding NGN on tiles. */
+  currency: string;
 }
 
 // Icon mapping for metrics
@@ -37,6 +39,7 @@ const getMetricIcon = (metric_type: string) => {
     case "cash_on_hand":
       return Wallet;
     case "monthly_fixed_costs":
+    case "monthly_operational_costs":
     case "cash_deployed":
       return TrendingUp;
     default:
@@ -54,6 +57,7 @@ const getMetricEmoji = (metric_type: string) => {
     case "cash_on_hand":
       return "💵";
     case "monthly_fixed_costs":
+    case "monthly_operational_costs":
       return "💸";
     case "cash_deployed":
       return "🌍";
@@ -74,6 +78,7 @@ const getMetricTitle = (metric_type: string) => {
     case "cash_on_hand":
       return "Cash on Hand";
     case "monthly_fixed_costs":
+    case "monthly_operational_costs":
       return "Monthly Fixed Costs";
     case "cash_deployed":
       return "Cash Deployed";
@@ -84,7 +89,7 @@ const getMetricTitle = (metric_type: string) => {
   }
 };
 
-const MarqueeItem: React.FC<MarqueeItemProps> = ({ item }) => {
+const MarqueeItem: React.FC<MarqueeItemProps> = ({ item, currency }) => {
   if (item.type === "project") {
     return (
       <div className="h-full">
@@ -107,17 +112,25 @@ const MarqueeItem: React.FC<MarqueeItemProps> = ({ item }) => {
       </div>
     );
   } else {
-    const emoji = getMetricEmoji(item.id || "");
-    const title = getMetricTitle(item.id || item.label || "");
-    const formattedValue =
-      item.id?.includes("amount") ||
-      item.id?.includes("contributions") ||
-      item.id?.includes("costs") ||
-      item.id?.includes("cash")
-        ? formatCurrency(parseFloat(item.value || ""), "NGN", {
+    const metricKey = item.metric_type || item.id || "";
+    const emoji = getMetricEmoji(metricKey);
+    const title = getMetricTitle(metricKey || item.label || "");
+    const rawAmount = Number(item.value || "");
+    const isCurrencyMetric =
+      metricKey.includes("amount") ||
+      metricKey.includes("contributions") ||
+      metricKey.includes("costs") ||
+      metricKey.includes("cash") ||
+      metricKey.includes("deployed");
+    const formattedValue = isCurrencyMetric
+      ? formatCurrency(
+          Number.isFinite(rawAmount) ? rawAmount : 0,
+          currency || "NGN",
+          {
             forceDecimals: true,
-          })
-        : formatCountAbv(Number(item.value));
+          }
+        )
+      : formatCountAbv(Number.isFinite(rawAmount) ? rawAmount : 0);
 
     return (
       <div className="w-full sm:max-w-96 h-full">
@@ -205,7 +218,7 @@ const MarqueeContainer = () => {
         {/* Metrics component - you might want to show a skeleton version of this too */}
         <Metrics
           message="Rated excellent on Trustpilot"
-          buttonInfo={{ href: "/sign-in", text: "Join the village" }}
+          buttonInfo={{ href: "/sign-in", text: "Join the campaign" }}
         />
       </section>
     );
@@ -229,7 +242,7 @@ const MarqueeContainer = () => {
 
         <Metrics
           message="Rated excellent on Trustpilot"
-          buttonInfo={{ href: "/sign-in", text: "Join the village" }}
+          buttonInfo={{ href: "/sign-in", text: "Join the campaign" }}
         />
       </section>
     );
@@ -276,7 +289,7 @@ const MarqueeContainer = () => {
         >
           {items.map((item, index) => (
             <SwiperSlide key={`${item.type}-${index}`} className="h-auto">
-              <MarqueeItem item={item} />
+              <MarqueeItem item={item} currency={currency} />
             </SwiperSlide>
           ))}
         </Swiper>
@@ -297,7 +310,7 @@ const MarqueeContainer = () => {
       {/* Metrics component */}
       <Metrics
         message="Rated excellent on Trustpilot"
-        buttonInfo={{ href: "/sign-in", text: "Join the village" }}
+        buttonInfo={{ href: "/sign-in", text: "Join the campaign" }}
       />
     </section>
   );

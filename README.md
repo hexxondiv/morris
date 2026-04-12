@@ -7,7 +7,7 @@ Community-driven project funding platform for South-East Nigeria.
 - **Framework:** Next.js (App Router)
 - **Auth:** [Auth.js](https://authjs.dev/) (NextAuth) with **Google** OAuth, database sessions, and role claims hydrated from MySQL (`User` / `UserRole`)
 - **Database:** **MySQL** with **Prisma** (schema + migrations under `prisma/`)
-- **File storage:** S3-compatible API via `@aws-sdk/client-s3` (`lib/storage`), configured with `STORAGE_PROVIDER`, `S3_*`, and `S3_PUBLIC_BASE_URL`
+- **File storage:** Local disk under `public/uploads/` (`lib/storage` → `/uploads/...` URLs)
 - **Payments:** SwitchApp client SDK where referenced by checkout flows
 
 ### Local development

@@ -83,12 +83,13 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.png" />
       </head>
       <body
         className={`${inter.variable} ${league.variable} font-inter antialiased`}
+        suppressHydrationWarning
       >
         <AuthSessionProvider session={session}>
           <SettingsInitializer />

@@ -154,7 +154,7 @@ export function EditProfileForm({ userId, profile, onCancel, onSave }: EditProfi
         </div>
       </div>
       <p className="text-xs text-stone-500">
-        Photos are stored on the configured object storage CDN and saved to your profile.
+        Photos are saved under site uploads and stored on your profile.
       </p>
       <div className="flex justify-end gap-3">
         <Button
