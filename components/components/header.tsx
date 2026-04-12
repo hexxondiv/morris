@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import CTAButton from "./cta-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -283,7 +282,7 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
 
             {/* Fixed Desktop Auth Area */}
-            <div className="hidden lg:flex items-center space-x-3 min-w-[200px] justify-end">
+            <div className="hidden lg:flex items-center space-x-3 justify-end">
               {status !== "authenticated" ? (
                 <>
                   <button
@@ -301,12 +300,12 @@ const Header: React.FC<HeaderProps> = ({
                 </>
               ) : (
                 <>
-                <CTAButton
+                <Link
                   href={pathname === "/dashboard" ? "/" : "/dashboard"}
-                  className="!text-sm !w-auto flex items-center"
+                  className="inline-flex h-9 items-center justify-center rounded-lg bg-theme-500 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-theme-600 hover:shadow-md"
                 >
                   {pathname === "/dashboard" ? "Home" : "Dashboard"}
-                </CTAButton>
+                </Link>
                 <div className="ml-2 flex items-center gap-2">
                   <div className="h-8 w-8 rounded-full bg-theme-100 text-theme-700 flex items-center justify-center text-xs font-semibold">
                     {(session?.user?.firstName || session?.user?.name || "?").charAt(0)}
@@ -430,7 +429,7 @@ const Header: React.FC<HeaderProps> = ({
                   <>
                   <Link
                     href="/dashboard"
-                    className="flex px-4 py-3 text-base font-medium text-center items-center text-theme-700 hover:text-theme-900 hover:bg-theme-50 rounded-lg transition-all duration-200"
+                    className="mx-4 flex h-10 items-center justify-center rounded-lg bg-theme-500 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-theme-600"
                     onClick={handleMobileMenuClose}
                   >
                     Dashboard
