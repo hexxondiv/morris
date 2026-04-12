@@ -36,6 +36,73 @@ export function TransactionActions({ transaction, setData }: TransactionActionsP
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<"details" | "refund" | "retry" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReverifying, setIsReverifying] = useState(false);
+
+  const canSwitchReverify =
+    transaction.payment_type === "pledge" && Boolean(transaction.payment_ref);
+
+  const onReverifySwitch = async () => {
+    if (!canSwitchReverify) return;
+    setIsReverifying(true);
+    try {
+      const res = await fetch("/api/admin/transactions/reverify-switch", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transactionId: transaction.id }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        switchStatus?: string;
+        pledgeStatus?: string | null;
+        transactionStatus?: string | null;
+      };
+      if (!res.ok) {
+        toast.error(payload.error || "Re-query failed");
+        return;
+      }
+      const ts = payload.transactionStatus as Transaction["payment_status"] | undefined;
+      if (ts === "completed") {
+        toast.success("Switch confirms payment; transaction and pledge updated.", {
+          description: `Switch: ${payload.switchStatus ?? "unknown"}`,
+        });
+        if (setData && ts) {
+          setData((prev) =>
+            prev.map((row) =>
+              row.id === transaction.id
+                ? {
+                    ...row,
+                    payment_status: ts,
+                    updated_at: new Date().toISOString(),
+                  }
+                : row
+            )
+          );
+        }
+      } else {
+        toast.info("Switch status refreshed", {
+          description: `Switch: ${payload.switchStatus ?? "unknown"} · Transaction: ${payload.transactionStatus ?? "—"}${payload.pledgeStatus ? ` · Pledge: ${payload.pledgeStatus}` : ""}`,
+        });
+        if (setData && ts) {
+          setData((prev) =>
+            prev.map((row) =>
+              row.id === transaction.id
+                ? {
+                    ...row,
+                    payment_status: ts,
+                    updated_at: new Date().toISOString(),
+                  }
+                : row
+            )
+          );
+        }
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Re-query request failed");
+    } finally {
+      setIsReverifying(false);
+    }
+  };
 
   const handleStatusUpdate = async (newStatus: Transaction["payment_status"]) => {
     setIsSubmitting(true);
@@ -86,12 +153,40 @@ export function TransactionActions({ transaction, setData }: TransactionActionsP
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
+      <div
+        className="inline-flex items-center rounded-md border border-input shadow-sm"
+        role="group"
+        aria-label="Transaction actions"
+      >
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 shrink-0 rounded-none rounded-l-md border-0 border-r border-input shadow-none"
+          disabled={!canSwitchReverify || isReverifying || isSubmitting}
+          title={
+            canSwitchReverify
+              ? "Re-query Switch (verify payment; updates pledge if paid)"
+              : "Only pledge rows with a Switch payment reference can be re-queried"
+          }
+          aria-label="Re-query Switch payment status"
+          onClick={onReverifySwitch}
+        >
+          <RefreshCw
+            className={`h-4 w-4 text-sky-600 dark:text-sky-400 ${isReverifying ? "animate-spin" : ""}`}
+          />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 shrink-0 rounded-none rounded-r-md border-0 shadow-none"
+              disabled={isReverifying}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onClick={() => openDialog("details")}>
             <Eye className="mr-2 h-4 w-4" />
@@ -119,7 +214,8 @@ export function TransactionActions({ transaction, setData }: TransactionActionsP
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">

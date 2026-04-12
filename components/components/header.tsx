@@ -3,8 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
-import logo from "@/images/logo.png";
-import logo_text from "@/images/logo_text.png";
 import { usePathname } from "next/navigation";
 import CTAButton from "./cta-button";
 import {
@@ -234,28 +232,18 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
             
             {/* Logo */}
-            <Link 
-              href="/" 
-              className="flex items-center space-x-3 group transition-transform duration-200 hover:scale-105"
+            <Link
+              href="/"
+              className="flex items-center group transition-transform duration-200 hover:scale-105"
             >
-              <div className="relative">
-                <Image
-                  src={logo}
-                  alt="MORRIS MONYE logo"
-                  width={40}
-                  height={40}
-                  className="transition-transform duration-200 group-hover:rotate-3"
-                />
-              </div>
-              <div className="hidden sm:block">
-                <Image
-                  src={logo_text}
-                  alt="MORRIS MONYE"
-                  width={90}
-                  height={24}
-                  className="transition-opacity duration-200 group-hover:opacity-80"
-                />
-              </div>
+              <Image
+                src="/logo.png"
+                alt="MORRIS MONYE"
+                width={512}
+                height={512}
+                priority
+                className="h-9 w-auto max-w-[200px] object-contain transition-transform duration-200 group-hover:rotate-3 sm:h-10 sm:max-w-[240px]"
+              />
             </Link>
 
             {/* Centered Desktop Navigation */}

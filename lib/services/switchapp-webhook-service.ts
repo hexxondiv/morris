@@ -10,6 +10,36 @@ export type SwitchappWebhookMetadata = {
   campaign?: string;
 };
 
+const PROJECT_INCREMENT_FLAG = "switchappProjectIncrementApplied" as const;
+
+/** Parse Switch `metadata` from webhooks or verify API (string JSON or object). */
+export function parseChargeMetadataFromSwitch(
+  raw: string | Record<string, unknown> | null | undefined
+): SwitchappWebhookMetadata | null {
+  if (raw == null) return null;
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    const o = raw as Record<string, unknown>;
+    if (typeof o.userId === "string" && typeof o.paymentType === "string") {
+      return o as SwitchappWebhookMetadata;
+    }
+    return null;
+  }
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return null;
+    }
+    const o = parsed as Record<string, unknown>;
+    if (typeof o.userId === "string" && typeof o.paymentType === "string") {
+      return o as SwitchappWebhookMetadata;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function mapGatewayStatus(raw: string): string {
   return raw === "successful" ? "completed" : raw;
 }
@@ -49,20 +79,26 @@ export async function applySwitchappChargeOutcome(input: {
     }
 
     const prevMeta = (existing.metadata as Record<string, unknown> | null) ?? {};
-    const mergedMeta: Prisma.InputJsonValue = {
+    const projectCreditAlreadyApplied =
+      prevMeta[PROJECT_INCREMENT_FLAG] === true;
+
+    const mergedMeta: Record<string, unknown> = {
       ...prevMeta,
       ...input.metadata,
       updatedStatus: mapped,
       switchappEvent: input.switchappEvent,
       paid_at: input.paidAt ?? null,
     };
+    if (projectCreditAlreadyApplied) {
+      mergedMeta[PROJECT_INCREMENT_FLAG] = true;
+    }
 
     await tx.transaction.update({
       where: { id: existing.id },
       data: {
         status: txnStatus,
         paymentMethod: input.paymentChannel ?? existing.paymentMethod,
-        metadata: mergedMeta,
+        metadata: mergedMeta as Prisma.InputJsonValue,
         paidAt: input.paidAt ? new Date(input.paidAt) : existing.paidAt,
       },
     });
@@ -83,15 +119,30 @@ export async function applySwitchappChargeOutcome(input: {
       data: { status: pledgeStatus },
     });
 
-    if (txnStatus === TransactionStatus.COMPLETED && pledge.projectId) {
-      await tx.project.update({
-        where: { id: pledge.projectId },
-        data: {
-          currentAmount: {
-            increment: input.amount,
-          },
-        },
-      });
+    const shouldCreditProject =
+      txnStatus === TransactionStatus.COMPLETED &&
+      Boolean(pledge.projectId) &&
+      !projectCreditAlreadyApplied;
+
+    if (!shouldCreditProject) {
+      return;
     }
+
+    await tx.project.update({
+      where: { id: pledge.projectId! },
+      data: {
+        currentAmount: {
+          increment: input.amount,
+        },
+      },
+    });
+
+    mergedMeta[PROJECT_INCREMENT_FLAG] = true;
+    await tx.transaction.update({
+      where: { id: existing.id },
+      data: {
+        metadata: mergedMeta as Prisma.InputJsonValue,
+      },
+    });
   });
 }

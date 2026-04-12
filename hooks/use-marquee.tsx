@@ -24,6 +24,8 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const backgroundRefreshRef = useRef<NodeJS.Timeout | null>(null);
   const isUnmounted = useRef(false);
+  /** Bumps on each effect run so async work from a previous mount is ignored (Strict Mode / fast navigation). */
+  const effectGenRef = useRef(0);
 
   // Analytics state
   const [analytics, setAnalytics] = useState({
@@ -39,6 +41,9 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
     if (!cached) return true;
     return marqueeCacheManager.isStale(CACHE_KEY);
   }, [lastUpdated]);
+
+  const isStaleRef = useRef(isStale);
+  isStaleRef.current = isStale;
 
   // Transform API response to MarqueeItem format with error handling
   const transformData = useCallback((apiData: MarqueeAPIResponse): MarqueeItem[] => {
@@ -247,8 +252,14 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
   }, [transformData, createMarqueeError]);
 
   // Main fetch function with comprehensive caching
-  const fetchMarqueeData = useCallback(async (forceRefresh = false, silent = false) => {
+  const fetchMarqueeData = useCallback(async (
+    forceRefresh = false,
+    silent = false,
+    effectGen?: number
+  ) => {
     if (isUnmounted.current) return;
+
+    const stale = () => effectGen != null && effectGen !== effectGenRef.current;
 
     const startTime = performance.now();
     let cacheHit = false;
@@ -258,7 +269,7 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
       if (activeRequest && !forceRefresh) {
         if (!silent) setLoading(true);
         const data = await activeRequest;
-        if (isUnmounted.current) return;
+        if (isUnmounted.current || stale()) return;
 
         const transformedItems = transformData(data);
         setItems(transformedItems);
@@ -289,7 +300,7 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
 
         // If data is stale, fetch fresh data in background
         if (marqueeCacheManager.isStale(CACHE_KEY)) {
-          setTimeout(() => fetchMarqueeData(true, true), 100);
+          setTimeout(() => fetchMarqueeData(true, true, effectGen), 100);
         }
         return;
       }
@@ -308,7 +319,7 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
       activeRequest = fetchWithRetry(0, controller.signal);
       const data = await activeRequest;
       
-      if (isUnmounted.current) return;
+      if (isUnmounted.current || stale()) return;
 
       activeRequest = null;
       requestAbortController = null;
@@ -342,7 +353,7 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
       });
 
     } catch (err) {
-      if (isUnmounted.current) return;
+      if (isUnmounted.current || stale()) return;
 
       console.error("Error fetching marquee data:", err);
       
@@ -379,7 +390,7 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
         setItems([]);
       }
     } finally {
-      if (!silent && !isUnmounted.current) {
+      if (!silent && !isUnmounted.current && !(effectGen != null && effectGen !== effectGenRef.current)) {
         setLoading(false);
       }
     }
@@ -393,7 +404,7 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
 
     backgroundRefreshRef.current = setInterval(() => {
       if (document.visibilityState === 'visible' && !isUnmounted.current) {
-        fetchMarqueeData(false, true); // Silent background refresh
+        fetchMarqueeData(false, true, effectGenRef.current); // Silent background refresh
       }
     }, BACKGROUND_REFRESH_INTERVAL);
   }, [fetchMarqueeData]);
@@ -423,13 +434,18 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
   // Initial fetch and setup
   useEffect(() => {
     isUnmounted.current = false;
-    fetchMarqueeData();
+    const gen = ++effectGenRef.current;
+    fetchMarqueeData(false, false, gen);
     setupBackgroundRefresh();
 
     // Visibility change handler
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isStale && !isUnmounted.current) {
-        fetchMarqueeData(false, true);
+      if (
+        document.visibilityState === 'visible' &&
+        isStaleRef.current &&
+        !isUnmounted.current
+      ) {
+        fetchMarqueeData(false, true, effectGenRef.current);
       }
     };
 
@@ -439,11 +455,11 @@ export const useMarqueeData = (): UseMarqueeDataReturn => {
       cleanup();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchMarqueeData, setupBackgroundRefresh, cleanup, isStale]);
+  }, [fetchMarqueeData, setupBackgroundRefresh, cleanup]);
 
   // Force refresh function
   const refetch = useCallback(() => {
-    return fetchMarqueeData(true);
+    return fetchMarqueeData(true, false, effectGenRef.current);
   }, [fetchMarqueeData]);
 
   return {

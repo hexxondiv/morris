@@ -9,25 +9,26 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        "p-green": "#225431",
+        "p-green": "#0d47a1",
         "p-dark": "#1F252B",
         "p-light": "#F4EFE2",
         "p-yellow": "#E7C457",
-        "hunter-green": "rgba(45, 94, 60, 1)",
-        "hunter-green-dark": "rgba(52, 84, 61, 1)",
+        "hunter-green": "rgba(21, 101, 192, 1)",
+        "hunter-green-dark": "rgba(13, 71, 161, 1)",
         "gold-metallic": "rgba(224, 188, 78, 1)",
         "ash-gray": "rgba(165, 173, 157, 1)",
         "old-lace": "rgba(249, 243, 230, 1)",
         theme: {
-          50: '#e6f0ea',
-          100: '#b3d1bf',
-          200: '#80b294',
-          300: '#5c9473',
-          400: '#447558',
-          500: '#2d5e3c',
-          600: '#254b31',
-          700: '#1d3826',
-          900: '#13251a',
+          50: "#e8f4fc",
+          100: "#c5e3f6",
+          200: "#9fd1f0",
+          300: "#79bfea",
+          400: "#4a9fe0",
+          500: "#1976d2",
+          600: "#1565c0",
+          700: "#0d47a1",
+          800: "#0a3b82",
+          900: "#062a5c",
         },
         gold: '#d4a017', // Replaces gold-metallic and p-yellow
         'stone-100': '#e5e7eb', // Replaces ash-gray

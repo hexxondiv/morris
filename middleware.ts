@@ -25,6 +25,7 @@ function isPublicRoute(pathname: string, method: string) {
 
   return (
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/public-ledger") ||
     pathname.startsWith("/api/open-ledger-metrics") ||
     pathname.startsWith("/api/marquee-data") ||
     pathname.startsWith("/projects") ||

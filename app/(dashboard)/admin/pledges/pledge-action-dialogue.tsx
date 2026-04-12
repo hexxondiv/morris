@@ -13,20 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
 import { markPledgeAsCompleted } from "@/lib/actions/pledge";
-
-interface Pledge {
-  id: string;
-  user_id: string;
-  user_email: string;
-  project_id: string | null;
-  project_title: string | null;
-  amount: number;
-  pledge_type: "one_time" | "recurring";
-  recurrence_interval: "monthly" | "quarterly" | "yearly" | null;
-  payment_day: "today" | "1st" | "28th" | null;
-  status: "pending" | "completed" | "failed" | "cancelled";
-  created_at: string;
-}
+import type { Pledge } from "@/lib/columns/pledge-columns";
 
 interface PledgeActionsProps {
   pledge: Pledge;
@@ -40,13 +27,11 @@ export function PledgeActions({ pledge, setData }: PledgeActionsProps) {
   const onMarkAsCompleted = async () => {
     setIsSubmitting(true);
 
-    // Store previous data for rollback
     let previousData: Pledge[] | null = null;
 
-    // Optimistic update
     if (setData) {
       setData((prevData) => {
-        previousData = [...prevData]; // Store for rollback
+        previousData = [...prevData];
         return prevData.map((item) =>
           item.id === pledge.id ? { ...item, status: "completed" } : item
         );
@@ -54,7 +39,12 @@ export function PledgeActions({ pledge, setData }: PledgeActionsProps) {
     }
 
     try {
-      const result = await markPledgeAsCompleted(pledge.id, pledge.user_id, pledge.project_id, pledge.amount);
+      const result = await markPledgeAsCompleted(
+        pledge.id,
+        pledge.user_id,
+        pledge.project_id,
+        pledge.amount
+      );
       if (result.success) {
         toast.success("Pledge marked as completed and transaction recorded");
         setIsCompleteDialogOpen(false);
@@ -62,11 +52,12 @@ export function PledgeActions({ pledge, setData }: PledgeActionsProps) {
         throw new Error(result.error || "Failed to mark pledge as completed");
       }
     } catch (error) {
-      // Revert optimistic update on error
       if (setData && previousData) {
         setData(previousData);
       }
-      toast.error(error instanceof Error ? error.message : "Failed to mark pledge as completed");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to mark pledge as completed"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -74,7 +65,6 @@ export function PledgeActions({ pledge, setData }: PledgeActionsProps) {
 
   return (
     <div className="flex space-x-2">
-      {/* Mark as Completed Dialog */}
       <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
         <DialogTrigger asChild>
           <Button
@@ -92,7 +82,8 @@ export function PledgeActions({ pledge, setData }: PledgeActionsProps) {
             <DialogTitle>Mark Pledge as Completed</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Are you sure you want to mark the pledge of ${pledge.amount.toFixed(2)} from {pledge.user_email} as completed? This will create a transaction record.
+            Are you sure you want to mark the pledge of ${pledge.amount.toFixed(2)} from{" "}
+            {pledge.user_email} as completed? This will create a transaction record.
           </p>
           <DialogFooter>
             <Button

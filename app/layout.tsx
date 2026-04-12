@@ -1,6 +1,6 @@
 import { type Metadata } from "next";
 import { getServerSession } from "next-auth";
-import { Inter, League_Spartan } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.scss";
 import { Toaster } from "sonner";
 import { SettingsInitializer } from "@/components/settings/settings-initializer";
@@ -34,16 +34,38 @@ export const metadata: Metadata = {
   },
 };
 
-const inter = Inter({
-  weight: ["300", "400", "500", "600", "700"],
-  subsets: ["latin"],
+// Self-hosted variable fonts (@fontsource-variable/*) so `next build` never calls Google Fonts
+// (avoids ETIMEDOUT / air-gapped CI failures from `next/font/google`).
+const inter = localFont({
+  src: [
+    {
+      path: "../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "../node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
   display: "swap",
   variable: "--font-inter",
 });
 
-const league = League_Spartan({
-  weight: ["400", "500", "600", "700", "800", "900"],
-  subsets: ["latin"],
+const league = localFont({
+  src: [
+    {
+      path: "../node_modules/@fontsource-variable/league-spartan/files/league-spartan-latin-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "../node_modules/@fontsource-variable/league-spartan/files/league-spartan-latin-ext-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
   display: "swap",
   variable: "--font-league",
 });

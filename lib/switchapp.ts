@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProjectSchema } from "./zod-schema";
 
@@ -35,11 +35,32 @@ interface PaymentDetails {
   onClose: (args: unknown) => void;
 }
 
+type CheckoutUser = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  /** Legacy Clerk-shaped session (kept for defensive reads) */
+  fullName?: string | null;
+  primaryEmailAddress?: { emailAddress?: string | null };
+};
+
+/** Public origin for Switch-only URLs (callback, webhook, logo). Use ngrok HTTPS here in dev. */
+function paymentsPublicOrigin(): string {
+  const raw =
+    (
+      process.env.NEXT_PUBLIC_PAYMENTS_PUBLIC_ORIGIN ||
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      ""
+    ).trim();
+  return raw.replace(/\/$/, "");
+}
+
 interface InitiateCheckoutParams {
   form: {
     getValues: (key: string) => number;
   };
-  user: any;
+  /** Must be signed-in with `id` (e.g. Auth.js session user). */
+  user: CheckoutUser;
   project?: (ProjectSchema & { id: string }) | null;
   txRef: string;
   pledgeId: string;
@@ -94,9 +115,41 @@ const useSwitchAppCheckout = () => {
       }
 
       try {
+        if (!user?.id) {
+          toast.error("Sign in required", {
+            description: "Please sign in to complete payment.",
+          });
+          return;
+        }
+
         const amount = form.getValues("amount");
         if (!amount || amount <= 0) {
           throw new Error("Invalid amount provided");
+        }
+
+        const email =
+          (typeof user?.email === "string" && user.email.trim()) ||
+          user?.primaryEmailAddress?.emailAddress?.trim() ||
+          "";
+        if (!email) {
+          toast.error("Email required for payment", {
+            description: "Sign in with an account that has an email address.",
+          });
+          return;
+        }
+
+        const fullName =
+          (typeof user?.name === "string" && user.name.trim()) ||
+          (typeof user?.fullName === "string" && user.fullName.trim()) ||
+          "Anonymous";
+
+        const origin = paymentsPublicOrigin();
+        if (!origin) {
+          toast.error("Missing public URL for payments", {
+            description:
+              "Set NEXT_PUBLIC_PAYMENTS_PUBLIC_ORIGIN (e.g. ngrok HTTPS) or NEXT_PUBLIC_BASE_URL.",
+          });
+          return;
         }
 
         const paymentDetails: PaymentDetails = {
@@ -104,8 +157,8 @@ const useSwitchAppCheckout = () => {
           currency: "NGN",
           amount: amount,
           customer: {
-            full_name: user.fullName || "Anonymous",
-            email: user.primaryEmailAddress?.emailAddress || "",
+            full_name: fullName,
+            email,
           },
           title:
             paymentType === "donation"
@@ -123,17 +176,45 @@ const useSwitchAppCheckout = () => {
             paymentType,
             projectId: project?.id,
           },
-          callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payments/success?paymentType=${paymentType}`,
-          live_webhook_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/switchapp`,
-          logo_url: `${process.env.NEXT_PUBLIC_BASE_URL}/logo.png`,
+          callback_url: `${origin}/payments/success?paymentType=${paymentType}`,
+          live_webhook_url: `${origin}/api/webhooks/switchapp`,
+          logo_url: `${origin}/logo.png`,
           onSuccess: (args: unknown) => {
-            console.log('Payment successful with args:', args);
-            toast.success('Payment completed successfully');
-            router.push(
-              paymentType === 'donation' || !project?.slug
-                ? '/dashboard'
-                : `/projects/${project.slug}`
-            );
+            console.log("Payment successful with args:", args);
+            void (async () => {
+              try {
+                const res = await fetch("/api/payments/switchapp/verify", {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ txRef }),
+                });
+                if (!res.ok) {
+                  const err = (await res.json().catch(() => ({}))) as {
+                    error?: string;
+                  };
+                  console.error("Switch verify failed:", res.status, err);
+                  toast.warning("Payment received; confirmation is still syncing.", {
+                    description:
+                      err.error ||
+                      "Your record will update when the server confirms with Switch. Try refreshing shortly.",
+                  });
+                } else {
+                  toast.success("Payment completed successfully");
+                }
+              } catch (e) {
+                console.error("Switch verify request error:", e);
+                toast.warning("Payment received; could not reach confirmation endpoint.", {
+                  description:
+                    "Check your connection and refresh your dashboard in a moment.",
+                });
+              }
+              router.push(
+                paymentType === "donation" || !project?.slug
+                  ? "/dashboard"
+                  : `/projects/${project.slug}`
+              );
+            })();
           },
           onClose: (args: unknown) => {
             console.log("Modal closed with args:", args);

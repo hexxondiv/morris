@@ -304,20 +304,24 @@ export const MarqueeLoadingSkeleton: React.FC<MarqueeLoadingSkeletonProps> = ({
   );
 };
 
-export const ShimmerSkeleton = ({ 
-  width = "w-32", 
-  height = "h-6", 
+/** Spans only — safe inside `<p>`, `<h1>`, and other phrasing-content parents (no `<div>` inside `<p>` hydration errors). */
+export const ShimmerSkeleton = ({
+  width = "w-32",
+  height = "h-6",
   className = "",
-  rounded = "rounded-md" 
-}: { 
-  width?: string; 
-  height?: string; 
+  rounded = "rounded-md",
+}: {
+  width?: string;
+  height?: string;
   className?: string;
   rounded?: string;
 }) => (
-  <div className={`${width} ${height} ${rounded} ${className} relative overflow-hidden bg-gray-200`}>
-    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-  </div>
+  <span
+    className={`${width} ${height} ${rounded} ${className} relative inline-block overflow-hidden bg-gray-200 align-middle`}
+    aria-hidden="true"
+  >
+    <span className="pointer-events-none absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+  </span>
 );
 
 // Individual skeleton exports for custom usage

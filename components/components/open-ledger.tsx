@@ -27,11 +27,12 @@ const ShimmerSkeleton = ({
   className?: string;
   rounded?: string;
 }) => (
-  <div
-    className={`${width} ${height} ${rounded} ${className} relative overflow-hidden bg-gray-200`}
+  <span
+    className={`${width} ${height} ${rounded} ${className} relative inline-block overflow-hidden bg-gray-200 align-middle`}
+    aria-hidden="true"
   >
-    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-  </div>
+    <span className="pointer-events-none absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+  </span>
 );
 
 const AnimatedNumber = ({

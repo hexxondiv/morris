@@ -1,9 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import {
-  PledgeInterval,
-  PledgeStatus,
-  PledgeType,
-} from "@prisma/client";
+import { PledgeInterval, PledgeStatus, PledgeType } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { capitalize } from "lodash";
 import { dec } from "@/lib/repositories/mappers";
@@ -178,7 +174,7 @@ export function mapPledgeAdminTableRow(
 ) {
   return {
     id: p.id,
-    user_id: p.userId,
+    user_id: p.userId ?? "",
     user_email: p.user?.email ?? "Unknown",
     full_name: p.user
       ? `${capitalize(p.user.firstName ?? "")} ${capitalize(p.user.lastName ?? "")}`.trim() ||

@@ -25,8 +25,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import logo from "@/images/logo.png";
-import logo_text from "@/images/logo_text.png";
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { usePageHeader } from "../store";
@@ -257,23 +255,19 @@ export default function DashboardLayout({
               className="flex items-center p-4 hover:bg-theme-100 transition-colors"
               onClick={() => isMobile && setIsSidebarOpen(false)}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-center min-w-0">
                 <Image
-                  src={logo}
-                  alt="MORRIS MONYE logo mark"
-                  width={32}
-                  height={32}
-                  className="object-contain"
+                  src="/logo.png"
+                  alt="MORRIS MONYE"
+                  width={512}
+                  height={512}
+                  priority
+                  className={
+                    isSidebarOpen
+                      ? "object-contain h-11 w-auto max-w-[min(100%,200px)]"
+                      : "object-contain h-9 w-9 rounded-full"
+                  }
                 />
-                {isSidebarOpen && (
-                  <Image
-                    src={logo_text}
-                    alt="MORRIS MONYE logotype"
-                    width={90}
-                    height={24}
-                    className="object-contain"
-                  />
-                )}
               </div>
             </Link>
 

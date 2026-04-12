@@ -1,20 +1,40 @@
 import { NextResponse } from "next/server";
 import {
   applySwitchappChargeOutcome,
-  type SwitchappWebhookMetadata,
+  parseChargeMetadataFromSwitch,
 } from "@/lib/services/switchapp-webhook-service";
 
-interface WebhookData {
+type WebhookData = {
   event: string;
   data: {
-    id: string;
+    id?: string;
     status: string;
-    metadata: string;
+    /** Switch sample schema uses string; some deliveries may send a parsed object. */
+    metadata: string | Record<string, unknown> | null;
     gateway_code?: string;
     tx_ref: string;
-    amount: number;
+    /** Primary amount; fallbacks match Switch sample `ViewEventTransactionDto`. */
+    amount?: number;
+    charged_amount?: number;
+    amount_paid?: number;
     paid_at?: string;
   };
+};
+
+function coercePositiveAmount(data: WebhookData["data"]): number | null {
+  const candidates: unknown[] = [
+    data.amount,
+    data.charged_amount,
+    data.amount_paid,
+  ];
+  for (const v of candidates) {
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
+    if (typeof v === "string" && v.trim()) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  }
+  return null;
 }
 
 const VALID_EVENTS = [
@@ -36,12 +56,24 @@ const handleError = (message: string, error: unknown, status = 500) => {
   return NextResponse.json({ error: message }, { status });
 };
 
+/** Lets you hit the URL in a browser or `curl` through ngrok to confirm routing. */
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    message: "Switch webhook endpoint — SwitchApp should POST charge.* events here.",
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const body: WebhookData = await request.json();
     logAudit("Received webhook", body as unknown as Record<string, unknown>);
 
     const { event, data } = body;
+    if (!data || typeof data !== "object") {
+      return handleError("Missing data object", new Error("Invalid webhook body"), 400);
+    }
+
     if (!VALID_EVENTS.includes(event)) {
       logAudit(`Ignoring event: ${event}`);
       return NextResponse.json({ received: true, ignored: true }, { status: 200 });
@@ -49,14 +81,14 @@ export async function POST(request: Request) {
 
     const {
       status,
-      metadata: metadataString,
+      metadata: metadataRaw,
       gateway_code: paymentChannel,
       tx_ref,
-      amount,
       paid_at,
     } = data;
 
-    if (!tx_ref || !status || !amount || amount <= 0) {
+    const amount = coercePositiveAmount(data);
+    if (!tx_ref || !status || amount == null) {
       return handleError(
         "Missing or invalid required fields",
         new Error("Invalid webhook data"),
@@ -64,18 +96,13 @@ export async function POST(request: Request) {
       );
     }
 
-    let metadata: SwitchappWebhookMetadata;
-    try {
-      metadata = JSON.parse(metadataString);
-      if (!metadata?.userId || !metadata?.paymentType) {
-        return handleError(
-          "Missing required metadata",
-          new Error("Invalid metadata"),
-          400
-        );
-      }
-    } catch (parseError) {
-      return handleError("Invalid metadata format", parseError, 400);
+    const metadata = parseChargeMetadataFromSwitch(metadataRaw);
+    if (!metadata) {
+      return handleError(
+        "Missing required metadata",
+        new Error("Invalid metadata"),
+        400
+      );
     }
 
     await applySwitchappChargeOutcome({

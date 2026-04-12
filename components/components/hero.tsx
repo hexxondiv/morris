@@ -69,15 +69,15 @@ const Hero = () => {
             <PulsingOnlineIndicator />
             <span className="flex items-center space-x-1 text-green">
               {loading ? (
-                <div className="flex items-center space-x-1">
+                <span className="inline-flex items-center space-x-1">
                   <ShimmerSkeleton
-                    width="w-8" 
-                    height="h-4" 
+                    width="w-8"
+                    height="h-4"
                     className="inline-block"
                     rounded="rounded"
                   />
                   <span>active villagers</span>
-                </div>
+                </span>
               ) : showError ? (
                 <span>-- active villagers</span>
               ) : (
