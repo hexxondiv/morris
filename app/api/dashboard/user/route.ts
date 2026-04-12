@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import {
+  TransactionDirection,
+  TransactionKind,
+} from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth/server";
 import { getPrimaryRole } from "@/lib/auth/roles";
@@ -13,8 +16,18 @@ export async function GET() {
 
     const userId = auth.userId;
 
-    const [user, pledgeSummary, recentTransactions, projectInvolvement, ongoingProjects] =
-      await Promise.all([
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const [
+      user,
+      pledgeSummary,
+      recentTransactions,
+      projectInvolvement,
+      ongoingProjects,
+      contributionsThisMonthAgg,
+    ] = await Promise.all([
         prisma.user.findUnique({
           where: { id: userId },
           include: {
@@ -69,6 +82,21 @@ export async function GET() {
           orderBy: { createdAt: "desc" },
           take: 6,
         }),
+        prisma.transaction.aggregate({
+          where: {
+            userId,
+            status: "COMPLETED",
+            direction: TransactionDirection.CREDIT,
+            kind: {
+              notIn: [TransactionKind.EXPENSE, TransactionKind.DEPLOYMENT],
+            },
+            OR: [
+              { paidAt: { gte: monthStart } },
+              { paidAt: null, createdAt: { gte: monthStart } },
+            ],
+          },
+          _sum: { amount: true },
+        }),
       ]);
 
     if (!user) {
@@ -90,18 +118,9 @@ export async function GET() {
       contributionProjects.map((project) => [project.id, project.title])
     );
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-
-    const completedTransactions = recentTransactions.filter((transaction) => transaction.status === "COMPLETED");
-    const contributionsThisMonth = recentTransactions
-      .filter(
-        (transaction) =>
-          transaction.paidAt &&
-          new Date(transaction.paidAt) >= monthStart
-      )
-      .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+    const contributionsThisMonth = Number(
+      contributionsThisMonthAgg._sum.amount ?? 0
+    );
 
     return NextResponse.json(
       {
