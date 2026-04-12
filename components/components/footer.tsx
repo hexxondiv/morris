@@ -5,8 +5,6 @@ import Link from "next/link";
 import left from "../../images/book_left.png";
 import right from "../../images/book_right.png";
 import CTAButton from "./cta-button";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Instagram, ExternalLink } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -133,108 +131,69 @@ const Footer: React.FC<FooterProps> = ({
           Footer
         </h2>
         <div className="mx-auto max-w-7xl px-2 pb-8 pt-14 sm:pt-20">
-          <div className="xl:grid xl:grid-cols-12 xl:gap-8">
-            {/* Links Grid */}
-            <div className="grid gap-8 xl:col-span-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                {footerSections.map((section) => (
-                  <div key={section.title} className="space-y-6">
-                    <h3 className="text-lg font-semibold text-theme-900 border-b border-theme-200 pb-2">
-                      {section.title}
-                    </h3>
-                    <nav role="navigation" aria-label={section.title}>
-                      <ul className="space-y-3">
-                        {section.links.map(({ href, label, external }) => (
-                          <li key={label}>
-                            {external ? (
-                              <a
-                                href={href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="group flex items-center gap-2 text-theme-700 hover:text-theme-900 transition-colors duration-200 text-sm font-medium"
-                              >
-                                <span className="relative">
-                                  {label}
-                                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-theme-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
-                                </span>
-                                <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </a>
-                            ) : (
-                              <Link
-                                href={href}
-                                className="group inline-block text-theme-700 hover:text-theme-900 transition-colors duration-200 text-sm font-medium"
-                              >
-                                <span className="relative">
-                                  {label}
-                                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-theme-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
-                                </span>
-                              </Link>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </nav>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Newsletter Section */}
-            <div className="xl:col-span-4 mt-12 sm:mt-16 xl:mt-0">
-              <div className="bg-white p-6 rounded-lg border border-theme-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-theme-900 mb-2">
-                  Stay updated
+          <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-14 lg:grid-cols-4 lg:gap-x-12 xl:gap-x-16">
+            {footerSections.map((section) => (
+              <div key={section.title} className="space-y-6">
+                <h3 className="text-lg font-semibold text-theme-900 border-b border-theme-200 pb-2">
+                  {section.title}
                 </h3>
-                <p className="text-sm text-theme-700 mb-6">
-                  Get the latest updates on our impact and new projects.
-                </p>
-
-                <form className="space-y-4">
-                  <div className="flex w-full items-center gap-2">
-                    <Input
-                      type="email"
-                      placeholder="Enter your email"
-                      className="bg-white border-theme-200 focus:border-theme-500 focus:ring-theme-500 h-12 text-sm"
-                      required
-                    />
-                    <Button
-                      type="submit"
-                      className="h-12 bg-theme-500 hover:bg-theme-600 text-white px-6 whitespace-nowrap transition-colors"
-                    >
-                      Subscribe
-                    </Button>
-                  </div>
-                  <p className="text-xs text-theme-600">
-                    We respect your privacy. Unsubscribe at any time.
-                  </p>
-                </form>
-
-                {/* Social Links */}
-                <div className="mt-8 pt-6 border-t border-theme-200">
-                  <h4 className="text-sm font-medium text-theme-900 mb-4">
-                    Follow us
-                  </h4>
-                  <div className="flex space-x-4">
-                    <a
-                      href="https://www.instagram.com/morris_monye/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex items-center justify-center w-10 h-10 rounded-full bg-theme-100 text-theme-700 hover:bg-theme-500 hover:text-white transition-colors duration-200"
-                      aria-label="Morris Monye on Instagram"
-                    >
-                      <Instagram className="w-4 h-4" />
-                    </a>
-                    <a
-                      href="https://democracybuilders.ng/team/morris-monye/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex items-center justify-center w-10 h-10 rounded-full bg-theme-100 text-theme-700 hover:bg-theme-500 hover:text-white transition-colors duration-200"
-                      aria-label="Morris Monye profile on Democracy Builders"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </div>
-                </div>
+                <nav role="navigation" aria-label={section.title}>
+                  <ul className="space-y-3">
+                    {section.links.map(({ href, label, external }) => (
+                      <li key={label}>
+                        {external ? (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex items-center gap-2 text-theme-700 hover:text-theme-900 transition-colors duration-200 text-sm font-medium"
+                          >
+                            <span className="relative">
+                              {label}
+                              <span className="absolute inset-x-0 bottom-0 h-0.5 bg-theme-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
+                            </span>
+                            <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </a>
+                        ) : (
+                          <Link
+                            href={href}
+                            className="group inline-block text-theme-700 hover:text-theme-900 transition-colors duration-200 text-sm font-medium"
+                          >
+                            <span className="relative">
+                              {label}
+                              <span className="absolute inset-x-0 bottom-0 h-0.5 bg-theme-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
+                            </span>
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </div>
+            ))}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-theme-900 border-b border-theme-200 pb-2">
+                Follow us
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href="https://www.instagram.com/morris_monye/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-center w-10 h-10 rounded-full bg-theme-100 text-theme-700 hover:bg-theme-500 hover:text-white transition-colors duration-200"
+                  aria-label="Morris Monye on Instagram"
+                >
+                  <Instagram className="w-4 h-4" />
+                </a>
+                <a
+                  href="https://democracybuilders.ng/team/morris-monye/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-center w-10 h-10 rounded-full bg-theme-100 text-theme-700 hover:bg-theme-500 hover:text-white transition-colors duration-200"
+                  aria-label="Morris Monye profile on Democracy Builders"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
               </div>
             </div>
           </div>

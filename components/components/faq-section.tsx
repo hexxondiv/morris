@@ -18,16 +18,6 @@ const faqs = [
       "You can find detailed information on our governance page or request official documents via our contact form.",
   },
   {
-    question: "Is MORRIS MONYE a registered charity?",
-    answer:
-      "Yes, MORRIS MONYE is registered and operates as a legal entity under relevant charitable regulations.",
-  },
-  {
-    question: "How does MORRIS MONYE select and vet project partners?",
-    answer:
-      "We use a rigorous selection process—background checks, past work assessments, and alignment with our mission—with a clear bias toward measurable outcomes in Aniocha North.",
-  },
-  {
     question: "How does MORRIS MONYE ensure transparent fund and project management?",
     answer:
       "We publish regular reports, use third-party audits, and give members access to financial breakdowns and the public ledger so money raised for Aniocha North stays traceable.",
