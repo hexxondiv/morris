@@ -75,7 +75,12 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  let session = null;
+  try {
+    session = await getServerSession(authOptions);
+  } catch (err) {
+    console.error("[root layout] getServerSession failed:", err);
+  }
 
   return (
     <html lang="en">

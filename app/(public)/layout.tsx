@@ -14,9 +14,11 @@ interface PublicLayoutProps {
 
 export default function PublicLayout({
   children,
-  title = "MORRIS MONYE - Community Funding & Impact Platform",
-  description = "MORRIS MONYE provides a community-driven platform for funding impactful projects, supporting communities, and publishing transparent impact data.",
-  keywords = "educational intervention, southeast education, student support services, professional development, learning disabilities, academic support, educational consulting, school improvement, literacy programs, STEM education",
+  title = "Morris Monye — Aniocha North | Delta State House of Assembly",
+  description =
+    "Morris Monye for Delta State House of Assembly (Aniocha North): community funding, transparent impact, and public leadership rooted in civic engagement.",
+  keywords =
+    "Morris Monye, Delta State House of Assembly, Aniocha North, Delta State politics, Democracy Builders, civic engagement, community funding, transparency",
   canonicalUrl,
   ogImage = "/og.png",
   noIndex = false,
@@ -30,13 +32,12 @@ export default function PublicLayout({
     "url": process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
     "logo": `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/logo.png`,
     "sameAs": [
-      // Add your social media URLs here
-      "https://instagram.com/isee",
-      "https://twitter.com/isee"
+      "https://www.instagram.com/morris_monye/",
+      "https://democracybuilders.ng/team/morris-monye/"
     ],
     "areaServed": {
       "@type": "Place",
-      "name": "South-East Nigeria"
+      "name": "Aniocha North, Delta State, Nigeria"
     },
     "serviceType": [
       "Project Funding",
@@ -100,8 +101,8 @@ export default function PublicLayout({
         />
         
         {/* Additional SEO Meta Tags */}
-        <meta name="theme-color" content="#1976d2" />
-        <meta name="msapplication-TileColor" content="#1976d2" />
+        <meta name="theme-color" content="#093f85" />
+        <meta name="msapplication-TileColor" content="#093f85" />
         <meta name="format-detection" content="telephone=no" />
       </Head>
       

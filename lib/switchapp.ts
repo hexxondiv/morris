@@ -178,7 +178,7 @@ const useSwitchAppCheckout = () => {
           },
           callback_url: `${origin}/payments/success?paymentType=${paymentType}`,
           live_webhook_url: `${origin}/api/webhooks/switchapp`,
-          logo_url: `${origin}/logo.png`,
+          logo_url: `${origin}/favicon.png`,
           onSuccess: (args: unknown) => {
             console.log("Payment successful with args:", args);
             void (async () => {

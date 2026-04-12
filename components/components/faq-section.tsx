@@ -8,9 +8,9 @@ import { ChevronDown } from "lucide-react";
 
 const faqs = [
   {
-    question: "Who's behind MORRIS MONYE?",
+    question: "Who is Morris Monye?",
     answer:
-      "MORRIS MONYE is led by a dedicated team of professionals committed to social impact and transparency.",
+      "Morris Monye is a Delta-born entrepreneur and civic leader—founder of Mo Credits and Crisp Agro, a media executive at News Central, and a voice for youth participation in governance. He is running for the Delta State House of Assembly to represent Aniocha North.",
   },
   {
     question: "How can I learn more about your governance and legal structure?",

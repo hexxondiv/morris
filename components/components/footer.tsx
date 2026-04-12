@@ -7,7 +7,7 @@ import right from "../../images/book_right.png";
 import CTAButton from "./cta-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Instagram, Twitter, ExternalLink } from "lucide-react";
+import { Instagram, ExternalLink } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import educareLogo from "../../images/educare.png";
@@ -216,22 +216,22 @@ const Footer: React.FC<FooterProps> = ({
                   </h4>
                   <div className="flex space-x-4">
                     <a
-                      href="https://instagram.com/isee"
+                      href="https://www.instagram.com/morris_monye/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group flex items-center justify-center w-10 h-10 rounded-full bg-theme-100 text-theme-700 hover:bg-theme-500 hover:text-white transition-colors duration-200"
-                      aria-label="Follow us on Instagram"
+                      aria-label="Morris Monye on Instagram"
                     >
                       <Instagram className="w-4 h-4" />
                     </a>
                     <a
-                      href="https://twitter.com/isee"
+                      href="https://democracybuilders.ng/team/morris-monye/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group flex items-center justify-center w-10 h-10 rounded-full bg-theme-100 text-theme-700 hover:bg-theme-500 hover:text-white transition-colors duration-200"
-                      aria-label="Follow us on Twitter"
+                      aria-label="Morris Monye profile on Democracy Builders"
                     >
-                      <Twitter className="w-4 h-4" />
+                      <ExternalLink className="w-4 h-4" />
                     </a>
                   </div>
                 </div>
@@ -243,7 +243,7 @@ const Footer: React.FC<FooterProps> = ({
           <div className="mt-12 border-t border-dashed border-theme-300 pt-8 sm:mt-16">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <p className="text-sm text-theme-600">
-                © 2025 MORRIS MONYE. A non-profit fund limited by guarantee.
+                © 2026 MORRIS MONYE. A non-profit fund limited by guarantee.
               </p>
               <p className="text-xs text-theme-500">
                 Built with ❤️ for collective impact

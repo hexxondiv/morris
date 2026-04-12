@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Download, FileText, Loader2, Check, AlertCircle, Eye } from "lucide-react";
-import { alexSignatureBase64, logoBase64 } from "@/lib/constants";
+import { alexSignatureBase64 } from "@/lib/constants";
 import { CertificateResult, DonationData, generateDonationCertificate } from "@/lib/utils/certificate-generator";
 
 
@@ -39,7 +39,7 @@ const ReceiptDownloadButton: React.FC<ReceiptDownloadButtonProps> = ({
     };
   }, [certificateResult]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (isGenerating) return;
 
     try {
@@ -47,7 +47,22 @@ const ReceiptDownloadButton: React.FC<ReceiptDownloadButtonProps> = ({
       setError(null);
       setShowActions(false);
 
-      // Prepare donation data
+      const logoRes = await fetch("/favicon.png", { cache: "force-cache" });
+      if (!logoRes.ok) {
+        throw new Error("Could not load organization logo");
+      }
+      const logoBlob = await logoRes.blob();
+      const orgLogoDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === "string") resolve(reader.result);
+          else reject(new Error("Could not read organization logo"));
+        };
+        reader.onerror = () => reject(reader.error ?? new Error("Could not read organization logo"));
+        reader.readAsDataURL(logoBlob);
+      });
+
+      // Prepare donation data (org logo matches site favicon: public/favicon.png)
       const donationData: DonationData = {
         donorName,
         amount: Number(transaction.amount),
@@ -57,7 +72,7 @@ const ReceiptDownloadButton: React.FC<ReceiptDownloadButtonProps> = ({
         transactionId: transaction.id,
         projectTitle: transaction.project_title,
         orgName,
-        orgLogo: logoBase64,
+        orgLogo: orgLogoDataUrl,
         signatureImage: alexSignatureBase64,
         signatureName: "Alex Onyia",
         signatureTitle: "Executive Director",
@@ -65,15 +80,13 @@ const ReceiptDownloadButton: React.FC<ReceiptDownloadButtonProps> = ({
         orgWebsite: "https://example.com"
       };
 
-      // Generate certificate with preview capability (now synchronous)
       const result = generateDonationCertificate(donationData);
 
       if (result.success) {
         setCertificateResult(result);
         setShowActions(true);
         setIsComplete(true);
-        
-        // Auto-hide success state after 3 seconds if no actions taken
+
         setTimeout(() => {
           if (showActions) {
             setIsComplete(false);

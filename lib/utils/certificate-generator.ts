@@ -198,16 +198,16 @@ interface RGBColor {
 
 const defaultConfig: CertificateConfig = {
   colors: {
-    primary: "#1976d2", // theme-500 (brand blue)
-    primaryLight: "#79bfea", // theme-300
-    primaryDark: "#0d47a1", // theme-700
+    primary: "#093f85", // theme-500 (brand blue)
+    primaryLight: "#8aadd6", // theme-300
+    primaryDark: "#062c5a", // theme-700
     gold: "#d4a017",
     background: "#f5f9fc", // light blue tint
     cardBackground: "#ffffff",
-    text: "#062a5c", // theme-900
-    textLight: "#4a9fe0", // theme-400
+    text: "#02152e", // theme-900
+    textLight: "#5e8fc3", // theme-400
     success: "#4caf50",
-    accent: "#9fd1f0", // theme-200
+    accent: "#b3cae6", // theme-200
   },
   
   layout: {

@@ -12,7 +12,7 @@ const howItWorkSteps = [
   {
     title: 'Step 1 - Join our village',
     description:
-      "Contribute a daily or monthly pledge. You'll be providing access to education for children, capital for local innovators and more.",
+      "Contribute a daily or monthly pledge to power community projects, local initiatives, and transparent impact in line with our shared values.",
   },
   {
     title: 'Step 2 - Get voting rights',
