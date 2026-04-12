@@ -41,6 +41,10 @@ export function TransactionActions({ transaction, setData }: TransactionActionsP
   const canSwitchReverify =
     transaction.payment_type === "pledge" && Boolean(transaction.payment_ref);
 
+  const showRequerySwitchButton =
+    transaction.payment_status !== "completed" &&
+    transaction.payment_type !== "expense";
+
   const onReverifySwitch = async () => {
     if (!canSwitchReverify) return;
     setIsReverifying(true);
@@ -158,30 +162,36 @@ export function TransactionActions({ transaction, setData }: TransactionActionsP
         role="group"
         aria-label="Transaction actions"
       >
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 shrink-0 rounded-none rounded-l-md border-0 border-r border-input shadow-none"
-          disabled={!canSwitchReverify || isReverifying || isSubmitting}
-          title={
-            canSwitchReverify
-              ? "Re-query Switch (verify payment; updates pledge if paid)"
-              : "Only pledge rows with a Switch payment reference can be re-queried"
-          }
-          aria-label="Re-query Switch payment status"
-          onClick={onReverifySwitch}
-        >
-          <RefreshCw
-            className={`h-4 w-4 text-sky-600 dark:text-sky-400 ${isReverifying ? "animate-spin" : ""}`}
-          />
-        </Button>
+        {showRequerySwitchButton && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 shrink-0 rounded-none rounded-l-md border-0 border-r border-input shadow-none"
+            disabled={!canSwitchReverify || isReverifying || isSubmitting}
+            title={
+              canSwitchReverify
+                ? "Re-query Switch (verify payment; updates pledge if paid)"
+                : "Only pledge rows with a Switch payment reference can be re-queried"
+            }
+            aria-label="Re-query Switch payment status"
+            onClick={onReverifySwitch}
+          >
+            <RefreshCw
+              className={`h-4 w-4 text-sky-600 dark:text-sky-400 ${isReverifying ? "animate-spin" : ""}`}
+            />
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 shrink-0 rounded-none rounded-r-md border-0 shadow-none"
+              className={
+                showRequerySwitchButton
+                  ? "h-8 w-8 shrink-0 rounded-none rounded-r-md border-0 shadow-none"
+                  : "h-8 w-8 shrink-0 rounded-md border-0 shadow-none"
+              }
               disabled={isReverifying}
             >
               <MoreHorizontal className="h-4 w-4" />

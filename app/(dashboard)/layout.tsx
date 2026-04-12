@@ -21,7 +21,6 @@ import {
   PiggyBank,
   Heart,
   CircleArrowOutUpRight,
-  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -44,7 +43,7 @@ const NAVIGATION_CONFIG = {
   admin: [
     { href: "/admin/users", icon: Users, label: "Users" },
     { href: "/admin/projects", icon: Folder, label: "Projects" },
-    { href: "/admin/cases", icon: FileText, label: "Cases" },
+    // { href: "/admin/cases", icon: FileText, label: "Cases" },
     { href: "/admin/transactions", icon: PiggyBank, label: "Transactions" },
     { href: "/admin/outflow", icon: CircleArrowOutUpRight, label: "Outflow" },
     { href: "/admin/pledges", icon: Heart, label: "Pledges" },
