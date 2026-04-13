@@ -25,6 +25,7 @@ export interface LedgerData {
   entries: PublicLedgerEntry[];
   metrics: LedgerMetrics;
   topDonors: TopDonor[];
+  hasMore?: boolean;
   loading: boolean;
   error: string | null;
 }

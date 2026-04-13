@@ -16,7 +16,6 @@ import {
   User,
   Calendar,
   Menu,
-  Vote,
   Settings,
   PiggyBank,
   Heart,
@@ -38,7 +37,7 @@ const NAVIGATION_CONFIG = {
     { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
     { href: "/dashboard/account", icon: User, label: "Account" },
     { href: "/dashboard/projects", icon: Folder, label: "Projects" },
-    { href: "/dashboard/voting", icon: Vote, label: "Voting" },
+    // { href: "/dashboard/voting", icon: Vote, label: "Voting" },
   ],
   admin: [
     { href: "/admin/users", icon: Users, label: "Users" },

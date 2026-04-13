@@ -60,8 +60,29 @@ interface DashboardData {
     paid_at: string;
     project_title?: string;
     currency: string;
+    kind: string;
   }[];
   ongoing_projects: ProjectSchema[];
+}
+
+function RecentTransactionCertificateAction({
+  tx,
+  donorName,
+}: {
+  tx: DashboardData["recent_transactions"][number];
+  donorName: string;
+}) {
+  if (tx.kind === "EXPENSE") {
+    return (
+      <span
+        className="text-xs text-theme-500"
+        title="Donation certificates are not issued for expense transactions"
+      >
+        —
+      </span>
+    );
+  }
+  return <ReceiptDownloadButton donorName={donorName} transaction={tx} />;
 }
 
 const Dashboard: React.FC = () => {
@@ -500,9 +521,9 @@ const Dashboard: React.FC = () => {
                                     </span>
                                   </td>
                                   <td className="px-6 py-4">
-                                    <ReceiptDownloadButton
+                                    <RecentTransactionCertificateAction
                                       donorName={`${data.profile.first_name} ${data.profile.last_name}`}
-                                      transaction={tx}
+                                      tx={tx}
                                     />
                                   </td>
                                 </tr>
@@ -560,9 +581,9 @@ const Dashboard: React.FC = () => {
                                     {toNaira(tx.amount)}
                                   </td>
                                   <td className="px-4 py-4">
-                                    <ReceiptDownloadButton
+                                    <RecentTransactionCertificateAction
                                       donorName={`${data.profile.first_name} ${data.profile.last_name}`}
-                                      transaction={tx}
+                                      tx={tx}
                                     />
                                   </td>
                                 </tr>
@@ -603,9 +624,9 @@ const Dashboard: React.FC = () => {
                               <p className="text-xs text-theme-600 mt-1">
                                 {formatDate(tx.paid_at) ?? "N/A"}
                               </p>
-                              <ReceiptDownloadButton
+                              <RecentTransactionCertificateAction
                                 donorName={`${data.profile.first_name} ${data.profile.last_name}`}
-                                transaction={tx}
+                                tx={tx}
                               />
                             </div>
                           </div>

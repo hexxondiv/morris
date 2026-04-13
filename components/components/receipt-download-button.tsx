@@ -21,9 +21,13 @@ interface ReceiptDownloadButtonProps {
 const ReceiptDownloadButton: React.FC<ReceiptDownloadButtonProps> = ({
   transaction,
   donorName = "Anonymous Donor",
-  orgName = "INTERVENTION FOR South East Education",
+  orgName = "Morris Monye Campaign",
   className = "",
 }) => {
+  const orgWebsite =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +81,7 @@ const ReceiptDownloadButton: React.FC<ReceiptDownloadButtonProps> = ({
         signatureName: "Alex Onyia",
         signatureTitle: "Executive Director",
         paymentMethod: transaction.payment_method,
-        orgWebsite: "https://example.com"
+        orgWebsite
       };
 
       const result = generateDonationCertificate(donationData);

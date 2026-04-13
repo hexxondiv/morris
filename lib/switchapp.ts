@@ -15,6 +15,7 @@ interface Metadata {
   pledgeId: string;
   paymentType: "donation" | "pledge";
   projectId?: string;
+  anonymous?: boolean;
 }
 
 interface PaymentDetails {
@@ -65,6 +66,7 @@ interface InitiateCheckoutParams {
   txRef: string;
   pledgeId: string;
   paymentType: "donation" | "pledge";
+  anonymous?: boolean;
   router: {
     push: (path: string) => void;
   };
@@ -104,6 +106,7 @@ const useSwitchAppCheckout = () => {
       txRef,
       pledgeId,
       paymentType,
+      anonymous,
       router,
     }: InitiateCheckoutParams): Promise<unknown> => {
       if (!isClientReady || !switchappClient) {
@@ -175,46 +178,19 @@ const useSwitchAppCheckout = () => {
             pledgeId,
             paymentType,
             projectId: project?.id,
+            anonymous: Boolean(anonymous),
           },
-          callback_url: `${origin}/payments/success?paymentType=${paymentType}`,
+          callback_url: `${origin}/payments/success?paymentType=${paymentType}&txRef=${encodeURIComponent(
+            txRef
+          )}`,
           live_webhook_url: `${origin}/api/webhooks/switchapp`,
           logo_url: `${origin}/favicon.png`,
           onSuccess: (args: unknown) => {
             console.log("Payment successful with args:", args);
-            void (async () => {
-              try {
-                const res = await fetch("/api/payments/switchapp/verify", {
-                  method: "POST",
-                  credentials: "include",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ txRef }),
-                });
-                if (!res.ok) {
-                  const err = (await res.json().catch(() => ({}))) as {
-                    error?: string;
-                  };
-                  console.error("Switch verify failed:", res.status, err);
-                  toast.warning("Payment received; confirmation is still syncing.", {
-                    description:
-                      err.error ||
-                      "Your record will update when the server confirms with Switch. Try refreshing shortly.",
-                  });
-                } else {
-                  toast.success("Payment completed successfully");
-                }
-              } catch (e) {
-                console.error("Switch verify request error:", e);
-                toast.warning("Payment received; could not reach confirmation endpoint.", {
-                  description:
-                    "Check your connection and refresh your dashboard in a moment.",
-                });
-              }
-              router.push(
-                paymentType === "donation" || !project?.slug
-                  ? "/dashboard"
-                  : `/projects/${project.slug}`
-              );
-            })();
+            toast.success("Payment received. Verifying transaction...");
+            router.push(
+              `/payments/success?paymentType=${paymentType}&txRef=${encodeURIComponent(txRef)}`
+            );
           },
           onClose: (args: unknown) => {
             console.log("Modal closed with args:", args);

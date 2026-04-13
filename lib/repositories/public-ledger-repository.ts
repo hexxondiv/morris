@@ -28,30 +28,47 @@ export async function getPublicLedgerData(
   const rows = await prisma.transaction.findMany({
     where: whereBase,
     orderBy: [{ postedAt: "desc" }, { createdAt: "desc" }],
-    take,
+    take: take + 1,
     include: {
       ledgerAccount: { select: { name: true, publicName: true, category: true } },
       project: { select: { title: true } },
+      pledge: { select: { donorName: true } },
       user: { select: { displayName: true, firstName: true, lastName: true, email: true } },
     },
   });
 
-  const asc = [...rows].reverse();
+  const hasMore = rows.length > take;
+  const pagedRows = hasMore ? rows.slice(0, take) : rows;
+  const asc = [...pagedRows].reverse();
   let running = 0;
   const ascWithRunning = asc.map((t) => {
     const signed =
       t.direction === TransactionDirection.CREDIT ? dec(t.amount) : -dec(t.amount);
     running += signed;
+    const metadata =
+      typeof t.metadata === "object" && t.metadata ? t.metadata : null;
+    const metadataDonorName =
+      metadata &&
+      "donorName" in metadata &&
+      typeof (metadata as { donorName?: string }).donorName === "string"
+        ? (metadata as { donorName: string }).donorName.trim()
+        : "";
+    const metadataAnonymous =
+      metadata &&
+      "anonymous" in metadata &&
+      typeof (metadata as { anonymous?: unknown }).anonymous === "boolean"
+        ? Boolean((metadata as { anonymous: boolean }).anonymous)
+        : false;
+    const pledgeDonorName = t.pledge?.donorName?.trim() ?? "";
     const donor =
-      t.user?.displayName?.trim() ||
-      [t.user?.firstName, t.user?.lastName].filter(Boolean).join(" ").trim() ||
-      t.user?.email ||
-      (typeof t.metadata === "object" &&
-      t.metadata &&
-      "donorName" in t.metadata &&
-      typeof (t.metadata as { donorName?: string }).donorName === "string"
-        ? (t.metadata as { donorName: string }).donorName
-        : "Anonymous");
+      metadataAnonymous || pledgeDonorName.toLowerCase() === "anonymous"
+        ? "Anonymous"
+        : metadataDonorName ||
+          pledgeDonorName ||
+          t.user?.displayName?.trim() ||
+          [t.user?.firstName, t.user?.lastName].filter(Boolean).join(" ").trim() ||
+          t.user?.email ||
+          "Anonymous";
 
     const kindLabel = transactionKindToApi(t.kind);
     const category =
@@ -150,5 +167,6 @@ export async function getPublicLedgerData(
       transactionCount,
     },
     topDonors,
+    hasMore,
   };
 }

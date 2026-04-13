@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parseResult.error.errors }, { status: 400 });
   }
 
-  const { amount, pledgeType, recurrenceInterval, paymentDay, projectId } =
+  const { amount, pledgeType, recurrenceInterval, paymentDay, projectId, anonymous } =
     parseResult.data;
 
   try {
@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       recurrenceInterval: recurrenceInterval ?? undefined,
       paymentDay: paymentDay ?? undefined,
       projectId: projectId ?? undefined,
+      anonymous: Boolean(anonymous),
     });
 
     if ("error" in result) {
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
         recurrenceInterval: recurrenceInterval ?? undefined,
         paymentDay: paymentDay ?? undefined,
         projectId: projectId ?? undefined,
+        anonymous: Boolean(anonymous),
       });
       if ("error" in retry) {
         return NextResponse.json({ error: retry.error }, { status: 500 });

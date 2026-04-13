@@ -54,6 +54,7 @@ export const transactionSchema = z.object({
   pledgeId: z.string().uuid().optional(),
   paymentType: z.enum(['pledge', 'deployment', 'expense']),
   projectId: z.string().uuid().optional(),
+  anonymous: z.boolean().optional(),
   currency: z.string().default('NGN'),
   // Additional fields for outflow transactions
   chartId: z.string().uuid().optional(),

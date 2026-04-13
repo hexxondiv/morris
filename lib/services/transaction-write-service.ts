@@ -15,6 +15,7 @@ export type CreateTransactionInput = {
   pledgeId?: string;
   paymentType: "pledge" | "deployment" | "expense";
   projectId?: string;
+  anonymous?: boolean;
   currency: string;
   chartId?: string;
   description?: string;
@@ -50,6 +51,7 @@ export async function createLedgerTransaction(
     pledgeId,
     paymentType,
     projectId,
+    anonymous,
     currency,
     chartId,
     description,
@@ -190,7 +192,12 @@ export async function createLedgerTransaction(
           description:
             paymentType === "pledge" ? null : (description ?? null),
           metadata:
-            paymentType === "deployment" && timelineStageId
+            paymentType === "pledge"
+              ? ({
+                  paymentType,
+                  anonymous: Boolean(anonymous),
+                } as Prisma.InputJsonValue)
+              : paymentType === "deployment" && timelineStageId
               ? ({
                   timeline_stage_id: timelineStageId,
                   paymentType,

@@ -8,6 +8,7 @@ export type SwitchappWebhookMetadata = {
   paymentType: "pledge" | "donation";
   projectId?: string;
   campaign?: string;
+  anonymous?: boolean;
 };
 
 const PROJECT_INCREMENT_FLAG = "switchappProjectIncrementApplied" as const;

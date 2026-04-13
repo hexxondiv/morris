@@ -205,14 +205,35 @@ export async function getTransactionDetailById(id: string) {
     include: {
       user: { select: { email: true, firstName: true, lastName: true } },
       project: { select: { title: true } },
+      pledge: { select: { donorName: true } },
       ledgerAccount: { select: { code: true, name: true, publicName: true } },
     },
   });
   if (!t) return null;
 
-  const userName = t.user
-    ? `${t.user.firstName ?? ""} ${t.user.lastName ?? ""}`.trim() || t.user.email
-    : "Unknown";
+  const metadata =
+    typeof t.metadata === "object" && t.metadata ? t.metadata : null;
+  const metadataAnonymous =
+    metadata &&
+    "anonymous" in metadata &&
+    typeof (metadata as { anonymous?: unknown }).anonymous === "boolean"
+      ? Boolean((metadata as { anonymous: boolean }).anonymous)
+      : false;
+  const metadataDonorName =
+    metadata &&
+    "donorName" in metadata &&
+    typeof (metadata as { donorName?: unknown }).donorName === "string"
+      ? String((metadata as { donorName: string }).donorName).trim()
+      : "";
+  const pledgeDonorName = t.pledge?.donorName?.trim() ?? "";
+  const userName =
+    metadataAnonymous || pledgeDonorName.toLowerCase() === "anonymous"
+      ? "Anonymous"
+      : metadataDonorName ||
+        pledgeDonorName ||
+        (t.user
+          ? `${t.user.firstName ?? ""} ${t.user.lastName ?? ""}`.trim() || t.user.email
+          : "Unknown");
 
   return {
     id: t.id,

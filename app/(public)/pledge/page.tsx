@@ -251,6 +251,7 @@ function GeneralPledgeContent() {
             pledgeId: pledgeResult.pledgeId,
             paymentType: "pledge",
             projectId: project?.id,
+            anonymous: Boolean(formData.anonymous),
             currency: "NGN",
           }),
         });
@@ -270,6 +271,7 @@ function GeneralPledgeContent() {
           txRef: transactionResult.txRef,
           pledgeId: pledgeResult.pledgeId,
           paymentType: "pledge",
+          anonymous: Boolean(formData.anonymous),
           router,
         });
       } catch (err: any) {

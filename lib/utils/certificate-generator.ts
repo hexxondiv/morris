@@ -237,10 +237,10 @@ const defaultConfig: CertificateConfig = {
   },
   
   text: {
-    mainTitle: 'CERTIFICATE OF IMPACT',
+    mainTitle: 'CERTIFICATE OF SUPPORT',
     subtitle: {
-      project: 'In Recognition of Educational Support',
-      general: 'For Advancing Educational Opportunities'
+      project: 'In Recognition of Campaign Project Support',
+      general: 'For Supporting the Morris Monye Campaign'
     },
     openingText: 'This certificate is presented to',
     projectText: {
@@ -249,11 +249,11 @@ const defaultConfig: CertificateConfig = {
     },
     generalText: {
       contribution: 'for your generous contribution of',
-      mission: 'to advance educational opportunities'
+      mission: 'to support transparent community-driven campaign initiatives'
     },
     impactMessages: {
-      project: 'Your investment in education is transforming lives and communities.',
-      general: 'Together, we are building brighter futures through education.'
+      project: 'Your support is helping fund accountable, people-focused campaign projects.',
+      general: 'Together, we are building a transparent and community-backed campaign.'
     },
     footer: {
       signature: 'Authorized Signature',
@@ -809,8 +809,8 @@ export function generateDonationCertificate(
     const blobUrl = URL.createObjectURL(pdfBlob);
     
     const filename = donationData.donationType === 'project'
-      ? `isee-${donationData.transactionId}.pdf`
-      : `isee-${donationData.transactionId}.pdf`;
+      ? `morris-${donationData.transactionId}.pdf`
+      : `morris-${donationData.transactionId}.pdf`;
     
     return {
       success: true,

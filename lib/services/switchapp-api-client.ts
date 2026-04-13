@@ -19,14 +19,28 @@ export type SwitchVerifyTransactionResult =
   | { ok: false; status: number; message: string };
 
 function pickPositiveAmount(d: Record<string, unknown>): number | null {
-  const candidates = [d.charged_amount, d.amount, d.amount_paid];
-  for (const v of candidates) {
+  const parsePositive = (v: unknown): number | null => {
     if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
     if (typeof v === "string" && v.trim()) {
       const n = Number(v);
       if (Number.isFinite(n) && n > 0) return n;
     }
+    return null;
+  };
+
+  // Prefer gross customer-paid amount over net settlement (which may exclude fees).
+  const preferredOrder = [d.amount_paid, d.amount, d.charged_amount];
+  for (const v of preferredOrder) {
+    const parsed = parsePositive(v);
+    if (parsed != null) return parsed;
   }
+
+  // Defensive fallback: if providers return multiple amount fields, keep the highest.
+  const fallbackValues = [d.amount_paid, d.amount, d.charged_amount]
+    .map(parsePositive)
+    .filter((n): n is number => n != null);
+  if (fallbackValues.length > 0) return Math.max(...fallbackValues);
+
   return null;
 }
 

@@ -22,6 +22,7 @@ export const usePublicLedger = (
       transactionCount: 0,
     },
     topDonors: [],
+    hasMore: false,
     loading: true,
     error: null,
   });
@@ -61,12 +62,14 @@ export const usePublicLedger = (
       };
 
       const topDonors = result?.topDonors;
+      const hasMore = Boolean(result?.hasMore);
 
       if (!mounted.current) return;
       setData({
         entries,
         metrics,
         topDonors,
+        hasMore,
         loading: false,
         error: null,
       });

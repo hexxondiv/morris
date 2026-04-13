@@ -7,6 +7,7 @@ import {
   applySwitchappChargeOutcome,
   parseChargeMetadataFromSwitch,
 } from "@/lib/services/switchapp-webhook-service";
+import { TransactionStatus } from "@prisma/client";
 
 const bodySchema = z.object({
   txRef: z.string().min(3).max(200),
@@ -80,5 +81,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  const updated = await prisma.transaction.findFirst({
+    where: {
+      paymentReference: txRef,
+      userId: auth.userId,
+    },
+    select: { status: true },
+  });
+
+  const transactionStatus = updated?.status ?? TransactionStatus.PENDING;
+  const verificationState =
+    transactionStatus === TransactionStatus.COMPLETED
+      ? "success"
+      : transactionStatus === TransactionStatus.PENDING
+        ? "pending"
+        : "failed";
+
+  return NextResponse.json({
+    ok: verificationState === "success",
+    verificationState,
+    transactionStatus,
+    gatewayStatus: verify.data.status,
+    amountPaid: verify.data.amount,
+    txRef,
+  });
 }

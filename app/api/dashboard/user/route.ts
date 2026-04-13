@@ -200,6 +200,7 @@ export async function GET() {
           paid_at: (transaction.paidAt || transaction.createdAt).toISOString(),
           project_title: transaction.project?.title || undefined,
           currency: transaction.currency,
+          kind: transaction.kind,
         })),
         ongoing_projects: ongoingProjects.map((project) => ({
           id: project.id,

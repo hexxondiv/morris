@@ -14,6 +14,7 @@ export type CreatePledgeInput = {
   recurrenceInterval?: "monthly" | "quarterly" | "yearly";
   paymentDay?: "today" | "1st" | "28th";
   projectId?: string;
+  anonymous?: boolean;
 };
 
 function mapPledgeType(t: CreatePledgeInput["pledgeType"]): PledgeType {
@@ -49,6 +50,7 @@ export async function createPendingPledge(
     recurrenceInterval,
     paymentDay,
     projectId,
+    anonymous,
   } = input;
 
   if (projectId) {
@@ -78,6 +80,7 @@ export async function createPendingPledge(
       recurrenceInterval: mapInterval(recurrenceInterval),
       paymentDay: mapPaymentDay(paymentDay),
       status: PledgeStatus.PENDING,
+      donorName: anonymous ? "Anonymous" : null,
     },
     select: { id: true },
   });
