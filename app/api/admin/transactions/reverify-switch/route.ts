@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
   try {
     await applySwitchappChargeOutcome({
-      txRef: verify.data.tx_ref,
+      txRef,
       gatewayStatus: verify.data.status,
       paymentChannel: verify.data.gateway_code ?? undefined,
       metadata,

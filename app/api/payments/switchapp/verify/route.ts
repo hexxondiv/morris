@@ -9,7 +9,7 @@ import {
 import { TransactionStatus } from "@prisma/client";
 
 const bodySchema = z.object({
-  txRef: z.string().min(3).max(200),
+  txRef: z.string().trim().min(3).max(200),
 });
 
 export async function POST(request: Request) {
@@ -67,8 +67,10 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Always use the ref we matched in DB. Switch verify may return a different `tx_ref`
+    // string than we stored; `applySwitchappChargeOutcome` looks up by `payment_reference`.
     await applySwitchappChargeOutcome({
-      txRef: verify.data.tx_ref,
+      txRef,
       gatewayStatus: verify.data.status,
       paymentChannel: verify.data.gateway_code ?? undefined,
       metadata,

@@ -13,17 +13,58 @@ export type SwitchappWebhookMetadata = {
 
 const PROJECT_INCREMENT_FLAG = "switchappProjectIncrementApplied" as const;
 
+function coerceUserId(v: unknown): string | null {
+  if (typeof v === "string" && v.trim()) return v.trim();
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  return null;
+}
+
+function coercePaymentType(
+  v: unknown
+): SwitchappWebhookMetadata["paymentType"] | null {
+  const s = typeof v === "string" ? v.trim().toLowerCase() : "";
+  if (s === "pledge" || s === "donation") return s;
+  return null;
+}
+
+/** Normalize Switch metadata (camelCase from checkout or snake_case from some API paths). */
+function metadataFromRecord(
+  o: Record<string, unknown>
+): SwitchappWebhookMetadata | null {
+  const userId =
+    coerceUserId(o.userId) ?? coerceUserId(o.user_id);
+  const paymentType =
+    coercePaymentType(o.paymentType) ?? coercePaymentType(o.payment_type);
+  if (!userId || !paymentType) return null;
+
+  const pledgeIdRaw = o.pledgeId ?? o.pledge_id;
+  const projectIdRaw = o.projectId ?? o.project_id;
+  const campaignRaw = o.campaign;
+
+  return {
+    userId,
+    paymentType,
+    pledgeId: typeof pledgeIdRaw === "string" ? pledgeIdRaw : undefined,
+    projectId: typeof projectIdRaw === "string" ? projectIdRaw : undefined,
+    campaign: typeof campaignRaw === "string" ? campaignRaw : undefined,
+    anonymous:
+      typeof o.anonymous === "boolean"
+        ? o.anonymous
+        : o.anonymous === "true"
+          ? true
+          : o.anonymous === "false"
+            ? false
+            : undefined,
+  };
+}
+
 /** Parse Switch `metadata` from webhooks or verify API (string JSON or object). */
 export function parseChargeMetadataFromSwitch(
   raw: string | Record<string, unknown> | null | undefined
 ): SwitchappWebhookMetadata | null {
   if (raw == null) return null;
   if (typeof raw === "object" && !Array.isArray(raw)) {
-    const o = raw as Record<string, unknown>;
-    if (typeof o.userId === "string" && typeof o.paymentType === "string") {
-      return o as SwitchappWebhookMetadata;
-    }
-    return null;
+    return metadataFromRecord(raw as Record<string, unknown>);
   }
   if (typeof raw !== "string" || !raw.trim()) return null;
   try {
@@ -31,11 +72,7 @@ export function parseChargeMetadataFromSwitch(
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
       return null;
     }
-    const o = parsed as Record<string, unknown>;
-    if (typeof o.userId === "string" && typeof o.paymentType === "string") {
-      return o as SwitchappWebhookMetadata;
-    }
-    return null;
+    return metadataFromRecord(parsed as Record<string, unknown>);
   } catch {
     return null;
   }
