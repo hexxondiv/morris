@@ -128,22 +128,15 @@ export function MorrisAbout() {
             </p>
           </div>
           <div className="flex flex-col gap-6">
-            <figure className="relative aspect-[3/4] max-h-[min(70vh,520px)] w-full overflow-hidden rounded-2xl border border-theme-200 shadow-lg">
+            <figure className="w-full overflow-hidden rounded-2xl border border-theme-200 shadow-lg">
               <Image
                 src="/morris/m2.jpeg"
                 alt="Morris Monye"
-                fill
-                className="object-cover object-top"
+                width={1200}
+                height={1600}
+                className="h-auto w-full object-cover object-top"
                 sizes="(min-width: 1024px) 40vw, 100vw"
-              />
-            </figure>
-            <figure className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-theme-200 shadow-md">
-              <Image
-                src="/morris/m3.jpeg"
-                alt="Morris Monye"
-                fill
-                className="object-cover object-center"
-                sizes="(min-width: 1024px) 40vw, 100vw"
+                priority
               />
             </figure>
           </div>

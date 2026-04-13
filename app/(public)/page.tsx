@@ -18,7 +18,9 @@ export default function Home() {
         <Hero />
         <MorrisNuggets />
         <MorrisAbout />
-        <MarqueeContainer />
+        <div className="pt-8 sm:pt-10">
+          <MarqueeContainer />
+        </div>
         {/* <Metrics /> */}
         <HowItWorks />
         <ProjectsSection />
