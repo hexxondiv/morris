@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Users, Folder, DollarSign, FileText } from "lucide-react";
 import { getCaseStatistics } from "@/lib/actions/cases";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardPage() {
   const users = [];
   const projects = [];

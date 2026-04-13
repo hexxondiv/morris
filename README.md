@@ -42,6 +42,7 @@ Export reads legacy Supabase **PostgREST** using the service role key (no `@supa
 
 - `docs/environment-reference.md` — environment variables
 - `docs/production-deployment.md` — production server deployment runbook
+- `Dockerfile` / `docker-compose.yml` — local build + remote deploy containers
 - `deploy/systemd/morris.service` — ready-to-use systemd unit
 - `deploy/apache/morris.example.com.conf` — Apache reverse proxy vhost template
 - `docs/file-by-file-migration-map.md` — Clerk/Supabase → internal stack map (historical + status)

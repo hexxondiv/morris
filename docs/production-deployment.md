@@ -1,10 +1,18 @@
 # Production Deployment Runbook
 
-This runbook is for deploying the Next.js app to a Linux server with Node.js and MySQL.
+This runbook is for deploying the Next.js app to production with MySQL.
+
+## Recommended deployment mode for older servers
+
+If your server cannot run modern Node.js due to older `glibc`, use Docker image deployment:
+
+1. Build and push image from a local machine.
+2. Pull and run the prebuilt image on the server.
+3. Keep Apache as reverse proxy to `127.0.0.1:3000`.
 
 ## 1) Provision server and runtime
 
-- Install Node.js 20+ and npm.
+- Install Docker Engine and Docker Compose plugin on the server.
 - Install and provision MySQL, then create a dedicated database/user for this app.
 - Ensure the deploy user has write access to `public/uploads/`.
 - Open only required ports (typically `80`/`443` from the internet, app port only from localhost/reverse proxy).
@@ -30,40 +38,42 @@ npm run check:prod
 
 `check:prod` runs a production build in a non-interactive way that is safe for CI/servers.
 
-## 4) Apply schema and seed baseline data
+## 4) Build image locally and push
 
 ```bash
-npm run db:migrate
-npm run db:seed
-npm run db:bootstrap-super-admin
+docker build -t your-docker-user/morris:2026-04-13-01 .
+docker push your-docker-user/morris:2026-04-13-01
+```
+
+Use immutable tags (`YYYY-MM-DD-NN`) to make rollback easy.
+
+## 5) Deploy image on server
+
+1. Copy `docker-compose.yml` to the server repo path.
+2. Update image tag in `docker-compose.yml`.
+3. Pull and start:
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose ps
+```
+
+Run schema/seed commands from the running image:
+
+```bash
+docker compose run --rm app npm run db:migrate
+docker compose run --rm app npm run db:seed
+docker compose run --rm app npm run db:bootstrap-super-admin
 ```
 
 Run the migration import pipeline only if you are migrating legacy data (see `docs/runbook-production-migration.md`).
-
-## 5) Start app process
-
-Run under a supervisor and do not rely on an interactive shell.
-
-### systemd unit (included)
-
-Template file: `deploy/systemd/morris.service`
-
-Install and enable:
-
-```bash
-sudo cp deploy/systemd/morris.service /etc/systemd/system/morris.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now morris.service
-sudo systemctl status morris.service
-```
-
-If your deploy user/path differs, update `User`, `Group`, `WorkingDirectory`, and `EnvironmentFile` in the unit file before copying.
 
 ### Apache site config (included)
 
 Template file: `deploy/apache/morris.example.com.conf`
 
-1. Replace `morris.example.com` and TLS cert paths with your real domain/cert files.
+1. Template is pre-filled for `morrismonye.com` and `www.morrismonye.com`. Update only if your production domain differs.
 2. Enable Apache modules and site:
 
 ```bash
@@ -76,16 +86,27 @@ sudo systemctl reload apache2
 
 This config terminates TLS at Apache and reverse-proxies traffic to `127.0.0.1:3000`.
 
-## 6) Post-deploy verification
+## 6) Rollback
+
+1. Set previous image tag in `docker-compose.yml`.
+2. Run:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+## 7) Post-deploy verification
 
 - Open landing page and authenticated dashboard.
 - Test Google sign-in flow end-to-end.
 - Verify file upload writes under `public/uploads/` and URLs resolve.
 - If payments enabled, run a live/test transaction and verify callback + webhook handling.
-- Confirm app restarts cleanly and persists uploads across deployments.
+- Confirm container restarts cleanly and persists uploads across deployments.
 
-## 7) Ongoing operations
+## 8) Ongoing operations
 
+- Keep immutable image tags for each deploy and rollback point.
 - Backup MySQL and `public/uploads/` regularly.
 - Keep `.env` out of version control and rotate secrets periodically.
-- Deploy using `npm ci`, `npm run check:prod`, and `npm run db:migrate` before restart.
+- Deploy by updating the image tag, then `docker compose pull && docker compose up -d`.
