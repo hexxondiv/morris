@@ -3,8 +3,8 @@
  * Full authentication and role checks run in route handlers via `@/lib/auth/server`.
  *
  * Public API prefixes must stay aligned with `app/api` route modules and public pages
- * that call those endpoints without a session. This layer gates on session cookies for
- * `/dashboard`, `/admin`, and `/api` (minus listed public paths).
+ * that call those endpoints without a session (including payment callbacks). This layer
+ * gates on session cookies for `/dashboard`, `/admin`, and `/api` (minus listed public paths).
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -30,6 +30,8 @@ function isPublicRoute(pathname: string, method: string) {
     pathname.startsWith("/api/marquee-data") ||
     pathname.startsWith("/projects") ||
     pathname.startsWith("/api/webhooks") ||
+    // Switch inline checkout: public key + post-redirect verify (handler validates txRef + Switch metadata).
+    pathname.startsWith("/api/payments/switchapp") ||
     pathname.startsWith("/api/settings/public") ||
     pathname.startsWith("/api/cases/create") ||
     pathname.startsWith("/api/cases/upload") ||

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth/server";
 import { prisma } from "@/lib/db/prisma";
 import { verifySwitchTransactionByRef } from "@/lib/services/switchapp-api-client";
 import {
@@ -14,9 +13,6 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const auth = await requireAuth();
-  if (!auth.authorized) return auth.response;
-
   let body: unknown;
   try {
     body = await request.json();
@@ -34,16 +30,20 @@ export async function POST(request: Request) {
 
   const { txRef } = parsed.data;
 
-  const owned = await prisma.transaction.findFirst({
-    where: {
-      paymentReference: txRef,
-      userId: auth.userId,
-    },
-    select: { id: true },
+  const byRef = await prisma.transaction.findFirst({
+    where: { paymentReference: txRef },
+    select: { id: true, userId: true },
   });
-  if (!owned) {
+  if (!byRef) {
     return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
   }
+  if (!byRef.userId) {
+    return NextResponse.json(
+      { error: "Transaction has no user; cannot verify" },
+      { status: 400 }
+    );
+  }
+  const ownerUserId = byRef.userId;
 
   const verify = await verifySwitchTransactionByRef(txRef);
   if (!verify.ok) {
@@ -59,9 +59,9 @@ export async function POST(request: Request) {
       { status: 502 }
     );
   }
-  if (metadata.userId !== auth.userId) {
+  if (metadata.userId !== ownerUserId) {
     return NextResponse.json(
-      { error: "Transaction metadata does not match signed-in user" },
+      { error: "Switch metadata does not match this transaction’s user" },
       { status: 403 }
     );
   }
@@ -81,11 +81,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  const updated = await prisma.transaction.findFirst({
-    where: {
-      paymentReference: txRef,
-      userId: auth.userId,
-    },
+  const updated = await prisma.transaction.findUnique({
+    where: { id: byRef.id },
     select: { status: true },
   });
 
