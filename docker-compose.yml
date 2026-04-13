@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   app:
-    image: hexxondiv/morris:2026-04-13-01
+    image: hexxondiv/morris:2026-04-13-03
     container_name: morris-app
     restart: unless-stopped
     env_file:
