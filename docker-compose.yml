@@ -1,6 +1,6 @@
 services:
   app:
-    image: your-docker-user/morris:latest
+    image: hexxondiv/morris:2026-04-13-01
     container_name: morris-app
     restart: unless-stopped
     env_file:
