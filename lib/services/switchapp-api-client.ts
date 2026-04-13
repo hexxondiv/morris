@@ -5,6 +5,18 @@
 
 const SWITCHAPP_API_BASE = "https://api.switchappgo.com";
 
+/** Uses console.error so logs appear under Next production `removeConsole` (only `error` kept). */
+export function switchVerifyLog(
+  message: string,
+  details?: Record<string, unknown>
+) {
+  if (details && Object.keys(details).length > 0) {
+    console.error(`[Switch verify] ${message}`, JSON.stringify(details));
+  } else {
+    console.error(`[Switch verify] ${message}`);
+  }
+}
+
 export type SwitchVerifyTransactionData = {
   tx_ref: string;
   status: string;
@@ -47,8 +59,11 @@ function pickPositiveAmount(d: Record<string, unknown>): number | null {
 export async function verifySwitchTransactionByRef(
   txRef: string
 ): Promise<SwitchVerifyTransactionResult> {
+  switchVerifyLog("Switch API: starting verify request", { txRef });
+
   const secret = process.env.SWITCHAPP_SECRET_KEY?.trim();
   if (!secret) {
+    switchVerifyLog("Switch API: abort — SWITCHAPP_SECRET_KEY not set");
     return {
       ok: false,
       status: 500,
@@ -69,10 +84,18 @@ export async function verifySwitchTransactionByRef(
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Network error";
+    switchVerifyLog("Switch API: fetch failed", { txRef, error: msg });
     return { ok: false, status: 502, message: msg };
   }
 
   const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  switchVerifyLog("Switch API: HTTP response", {
+    txRef,
+    httpStatus: res.status,
+    ok: res.ok,
+    body: json,
+  });
+
   if (!res.ok) {
     const message =
       (typeof json?.message === "string" && json.message) ||
@@ -89,6 +112,10 @@ export async function verifySwitchTransactionByRef(
 
   const data = json.data as Record<string, unknown> | null | undefined;
   if (!data || typeof data !== "object") {
+    switchVerifyLog("Switch API: envelope success but data missing/invalid", {
+      txRef,
+      json,
+    });
     return { ok: false, status: 502, message: "Switch verify missing data" };
   }
 
@@ -99,6 +126,11 @@ export async function verifySwitchTransactionByRef(
   const status = typeof data.status === "string" ? data.status : "";
   const amount = pickPositiveAmount(data);
   if (!status || amount == null) {
+    switchVerifyLog("Switch API: could not derive status or amount", {
+      txRef,
+      dataKeys: Object.keys(data),
+      data,
+    });
     return { ok: false, status: 502, message: "Switch verify response missing status or amount" };
   }
 
@@ -118,15 +150,22 @@ export async function verifySwitchTransactionByRef(
         ? String(data.paid_at)
         : null;
 
+  const normalized = {
+    tx_ref: ref,
+    status,
+    gateway_code,
+    metadata,
+    paid_at,
+    amount,
+  };
+
+  switchVerifyLog("Switch API: normalized success payload", {
+    txRef,
+    normalized,
+  });
+
   return {
     ok: true,
-    data: {
-      tx_ref: ref,
-      status,
-      gateway_code,
-      metadata,
-      paid_at,
-      amount,
-    },
+    data: normalized,
   };
 }

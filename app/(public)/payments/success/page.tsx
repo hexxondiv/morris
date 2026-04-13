@@ -40,6 +40,7 @@ function PaymentsSuccessContent() {
   );
   const [isRetrying, setIsRetrying] = useState(false);
   const [amountPaid, setAmountPaid] = useState<number | null>(null);
+  const [localTime, setLocalTime] = useState<string>("");
 
   const txRef = useMemo(() => {
     return (
@@ -121,6 +122,13 @@ function PaymentsSuccessContent() {
     void verifyPayment();
   }, [txRef]);
 
+  useEffect(() => {
+    const tick = () => setLocalTime(new Date().toLocaleTimeString());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const statusConfig: StatusConfig = {
     idle: {
       title: "Payment Update",
@@ -170,8 +178,8 @@ function PaymentsSuccessContent() {
             <ShieldCheck className="h-3.5 w-3.5" />
             Switch Payment Verification
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {new Date().toLocaleTimeString()}
+          <p className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+            {localTime || "\u00A0"}
           </p>
         </div>
 
