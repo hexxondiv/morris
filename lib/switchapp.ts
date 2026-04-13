@@ -36,6 +36,11 @@ interface PaymentDetails {
   onClose: (args: unknown) => void;
 }
 
+type RuntimePaymentsConfig = {
+  publicKey: string;
+  publicOrigin: string;
+};
+
 type CheckoutUser = {
   id: string;
   name?: string | null;
@@ -44,17 +49,6 @@ type CheckoutUser = {
   fullName?: string | null;
   primaryEmailAddress?: { emailAddress?: string | null };
 };
-
-/** Public origin for Switch-only URLs (callback, webhook, logo). Use ngrok HTTPS here in dev. */
-function paymentsPublicOrigin(): string {
-  const raw =
-    (
-      process.env.NEXT_PUBLIC_PAYMENTS_PUBLIC_ORIGIN ||
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      ""
-    ).trim();
-  return raw.replace(/\/$/, "");
-}
 
 interface InitiateCheckoutParams {
   form: {
@@ -76,23 +70,39 @@ const useSwitchAppCheckout = () => {
   // State to hold the SwitchAppCheckout client
   const [switchappClient, setSwitchappClient] = useState<any | null>(null);
   const [isClientReady, setIsClientReady] = useState(false);
+  const [runtimeConfig, setRuntimeConfig] = useState<RuntimePaymentsConfig | null>(
+    null
+  );
 
   // Initialize SwitchAppCheckout client only on the client side
   useEffect(() => {
     if (typeof window !== "undefined") {
-      import("@switchappgo/switchapp-inline")
-        .then((module) => {
+      fetch("/api/payments/switchapp/config", { cache: "no-store" })
+        .then(async (res) => {
+          const config = (await res.json()) as Partial<RuntimePaymentsConfig>;
+          if (!res.ok) {
+            throw new Error("Failed to load payment config");
+          }
+          const publicKey = (config.publicKey || "").trim();
+          const publicOrigin = (config.publicOrigin || "").trim();
+          if (!publicKey || !publicOrigin) {
+            throw new Error("Missing Switch runtime configuration");
+          }
+
+          const module = await import("@switchappgo/switchapp-inline");
           const SwitchAppCheckout = module.default;
-          const client = new SwitchAppCheckout({
-            publicApiKey: process.env.NEXT_PUBLIC_SW_PUBLIC_KEY || "",
-          });
+          const client = new SwitchAppCheckout({ publicApiKey: publicKey });
+          setRuntimeConfig({ publicKey, publicOrigin });
           setSwitchappClient(client);
           setIsClientReady(true);
           console.log("SwitchAppCheckout client initialized");
         })
         .catch((error) => {
           console.error("Failed to load SwitchAppCheckout:", error);
-          toast.error("Failed to initialize payment client");
+          toast.error("Failed to initialize payment client", {
+            description:
+              "Check runtime payment env vars: NEXT_PUBLIC_SW_PUBLIC_KEY and NEXT_PUBLIC_PAYMENTS_PUBLIC_ORIGIN/NEXT_PUBLIC_BASE_URL.",
+          });
         });
     }
   }, []);
@@ -109,7 +119,7 @@ const useSwitchAppCheckout = () => {
       anonymous,
       router,
     }: InitiateCheckoutParams): Promise<unknown> => {
-      if (!isClientReady || !switchappClient) {
+      if (!isClientReady || !switchappClient || !runtimeConfig) {
         console.error("SwitchAppCheckout client not ready");
         toast.error("Payment client not initialized", {
           description: "Please try again in a moment.",
@@ -146,7 +156,7 @@ const useSwitchAppCheckout = () => {
           (typeof user?.fullName === "string" && user.fullName.trim()) ||
           "Anonymous";
 
-        const origin = paymentsPublicOrigin();
+        const origin = runtimeConfig.publicOrigin;
         if (!origin) {
           toast.error("Missing public URL for payments", {
             description:
@@ -172,7 +182,7 @@ const useSwitchAppCheckout = () => {
               ? "General donation"
               : `Support for: ${project?.title || "Project"}`,
           tx_ref: txRef,
-          public_key: process.env.NEXT_PUBLIC_SW_PUBLIC_KEY || "",
+          public_key: runtimeConfig.publicKey,
           metadata: {
             userId: user.id,
             pledgeId,
@@ -209,7 +219,7 @@ const useSwitchAppCheckout = () => {
         throw error;
       }
     },
-    [switchappClient, isClientReady]
+    [switchappClient, isClientReady, runtimeConfig]
   );
 
   return { initiateCheckout, isClientReady };
