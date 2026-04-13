@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   app:
     image: hexxondiv/morris:2026-04-13-01

@@ -86,6 +86,34 @@ sudo systemctl reload apache2
 
 This config terminates TLS at Apache and reverse-proxies traffic to `127.0.0.1:3000`.
 
+### Certbot commands for morrismonye.com
+
+Install Certbot + Apache plugin:
+
+```bash
+sudo apt update
+sudo apt install -y certbot python3-certbot-apache
+```
+
+Issue/attach certificate for `morrismonye.com` and `www.morrismonye.com`:
+
+```bash
+sudo certbot --apache \
+  -d morrismonye.com \
+  -d www.morrismonye.com \
+  --redirect \
+  --agree-tos \
+  -m admin@morrismonye.com \
+  --non-interactive
+```
+
+Verify auto-renewal:
+
+```bash
+sudo systemctl status certbot.timer
+sudo certbot renew --dry-run
+```
+
 ## 6) Rollback
 
 1. Set previous image tag in `docker-compose.yml`.
