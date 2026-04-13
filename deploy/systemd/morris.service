@@ -1,0 +1,22 @@
+[Unit]
+Description=Morris Next.js application
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/html/morris
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=/var/www/html/morris/.env
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

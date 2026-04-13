@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check:prod": "npm run build",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",

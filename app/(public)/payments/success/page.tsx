@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState, type ReactElement } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -29,7 +29,7 @@ type StatusConfig = {
   tone: string;
   badge: string;
   helper: string;
-  icon: JSX.Element;
+  icon: ReactElement;
 };
 
 function PaymentsSuccessContent() {
