@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import {
+  TransactionDirection,
   TransactionKind,
   TransactionStatus,
 } from "@prisma/client";
@@ -235,6 +236,28 @@ export async function getTransactionDetailById(id: string) {
           ? `${t.user.firstName ?? ""} ${t.user.lastName ?? ""}`.trim() || t.user.email
           : "Unknown");
 
+  let runningBalance: number | undefined;
+  if (t.status === TransactionStatus.COMPLETED) {
+    const orderedRows = await prisma.transaction.findMany({
+      where: { status: TransactionStatus.COMPLETED },
+      orderBy: [{ postedAt: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+      select: { id: true, direction: true, amount: true },
+    });
+
+    let running = 0;
+    for (const row of orderedRows) {
+      const signedAmount =
+        row.direction === TransactionDirection.CREDIT
+          ? dec(row.amount)
+          : -dec(row.amount);
+      running += signedAmount;
+      if (row.id === t.id) {
+        runningBalance = running;
+        break;
+      }
+    }
+  }
+
   return {
     id: t.id,
     pledge_id: t.pledgeId,
@@ -260,5 +283,6 @@ export async function getTransactionDetailById(id: string) {
     created_at: t.createdAt.toISOString(),
     updated_at: t.updatedAt.toISOString(),
     category: t.ledgerAccount?.code ?? null,
+    running_balance: runningBalance,
   };
 }
