@@ -72,7 +72,7 @@ const getMetricEmoji = (metric_type: string) => {
 const getMetricTitle = (metric_type: string) => {
   switch (metric_type) {
     case "active_villagers":
-      return "Active Villagers";
+      return "Active supporters";
     case "monthly_contributions":
       return "Monthly Contributions";
     case "cash_on_hand":

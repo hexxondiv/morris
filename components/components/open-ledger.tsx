@@ -108,11 +108,11 @@ export default function OpenLedger() {
               </span>
             </li>
 
-            {/* Active villagers with loading state */}
+            {/* Active supporters with loading state */}
             <li className="flex justify-between hover:bg-mud-50/25 px-5 sm:px-7 py-4 sm:py-5 transition-colors duration-300">
               <div className="text-size-lg font-medium text-mud-800 relative flex items-center">
                 <PulsingOnlineIndicator size={20} />
-                <span className="pl-7">Active villagers</span>
+                <span className="pl-7">Active supporters</span>
               </div>
               <div className="sm:pl-8 sm:border-l border-mud-300 text-size-lg font-medium text-mud-900">
                 {loading ? (

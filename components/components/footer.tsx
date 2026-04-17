@@ -207,19 +207,7 @@ const Footer: React.FC<FooterProps> = ({
               <p className="text-xs text-theme-500">
                 Built with ❤️ for collective impact
               </p>
-              <div className="">
-                {/* Alternative text-based "Powered by" if image doesn't include it */}
-                <span className="text-sm md:text-base font-light italic text-gray-300">
-                  Powered by{" "}
-                </span>
-                <Image
-                    src={educareLogo} // Replace with the path to your edited image file
-                    alt="Educare Logo"
-                    width={150} // Adjust based on your image dimensions
-                    height={60} // Adjust based on your image dimensions
-                    className="object-contain"
-                  />
-              </div>
+             
             </div>
           </div>
         </div>

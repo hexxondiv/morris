@@ -102,14 +102,14 @@ const Hero = () => {
                         className="inline-block"
                         rounded="rounded"
                       />
-                      <span className="text-theme-700/90">active villagers</span>
+                      <span className="text-theme-700/90">Active supporters</span>
                     </span>
                   ) : showError ? (
-                    <span className="text-theme-700/90">-- active villagers</span>
+                    <span className="text-theme-700/90">-- Active supporters</span>
                   ) : (
                     <AnimatedNumber
                       value={activeVillagers}
-                      suffix=" active villagers"
+                      suffix=" Active supporters"
                       className="text-theme-900"
                     />
                   )}

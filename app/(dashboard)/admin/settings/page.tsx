@@ -85,7 +85,7 @@ const SettingsManager: React.FC = () => {
 
   // Keep your existing marquee options
   const marqueeMetricOptions: MarqueeItem[] = [
-    { id: "active_villagers", label: "Active Villagers", icon: Users },
+    { id: "active_villagers", label: "Active supporters", icon: Users },
     { id: "monthly_contributions", label: "Monthly Contributions", icon: DollarSign },
     { id: "cash_on_hand", label: "Cash on Hand", icon: Wallet },
     { id: "monthly_operational_costs", label: "Monthly Operational Costs", icon: TrendingUp },

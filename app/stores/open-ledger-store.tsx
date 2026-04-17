@@ -123,7 +123,7 @@ export const useLastFetch = () =>
   useOpenLedgerStore((state) => state.lastFetch);
 export const useMetrics = () => useOpenLedgerStore((state) => state.metrics);
 
-// Active Villagers selectors
+// Active supporters selectors
 export const useActiveVillagersCount = () =>
   useOpenLedgerStore((state) => state.metrics?.active_villagers || 0);
 

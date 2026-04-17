@@ -1,4 +1,16 @@
-import { PrismaClient, Prisma, AuditActorType, EventStatus, EventType, LedgerAccountCategory, SettingAccessLevel, SettingCacheStrategy, SettingDataType, UserOnboardingState, UserStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+  AuditActorType,
+  EventStatus,
+  EventType,
+  LedgerAccountCategory,
+  SettingAccessLevel,
+  SettingCacheStrategy,
+  SettingDataType,
+  UserOnboardingState,
+  UserStatus,
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -94,7 +106,12 @@ const roleCatalog = [
     name: "User",
     description: "Default signed-in member role.",
     sortOrder: 100,
-    permissionKeys: ["projects.read", "pledges.read", "votes.cast", "events.read"],
+    permissionKeys: [
+      "projects.read",
+      "pledges.read",
+      "votes.cast",
+      "events.read",
+    ],
   },
 ] as const;
 
@@ -211,8 +228,8 @@ const defaultSettings: Array<{
   },
   {
     key: "manual_active_villagers",
-    displayName: "Manual Active Villagers",
-    description: "Fallback active villagers metric.",
+    displayName: "Manual Active supporters",
+    description: "Fallback Active supporters metric.",
     category: "metrics",
     value: 2006,
     defaultValue: 2006,
@@ -250,7 +267,12 @@ const defaultSettings: Array<{
 
 function parseName(fullName: string) {
   const trimmed = fullName.trim();
-  if (!trimmed) return { firstName: "Platform", lastName: "Admin", displayName: "Platform Admin" };
+  if (!trimmed)
+    return {
+      firstName: "Platform",
+      lastName: "Admin",
+      displayName: "Platform Admin",
+    };
   const [firstName, ...rest] = trimmed.split(/\s+/);
   return {
     firstName,
@@ -369,7 +391,7 @@ async function bootstrapSuperAdmin() {
 
   if (!email || !name) {
     throw new Error(
-      "BOOTSTRAP_SUPER_ADMIN_EMAIL and BOOTSTRAP_SUPER_ADMIN_NAME must be set for bootstrap."
+      "BOOTSTRAP_SUPER_ADMIN_EMAIL and BOOTSTRAP_SUPER_ADMIN_NAME must be set for bootstrap.",
     );
   }
 

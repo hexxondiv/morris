@@ -104,7 +104,7 @@ async function generateMetricItems(
     }
   > = {
     active_villagers: {
-      title: "Active villagers",
+      title: "Active supporters",
       getValue: (m) => m.activeVillagers.toLocaleString(),
       href: "/dashboard/users",
       trend: { direction: "up", value: "+12% this month" },
