@@ -60,7 +60,7 @@ const handleError = (message: string, error: unknown, status = 500) => {
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    message: "Switch webhook endpoint — SwitchApp should POST charge.* events here.",
+    message: "Switch webhook endpoint - SwitchApp should POST charge.* events here.",
   });
 }
 

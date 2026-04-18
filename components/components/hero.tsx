@@ -133,7 +133,7 @@ const Hero = () => {
                 For Delta State House of Assembly
               </p>
               <p className="mx-auto max-w-xl text-lg leading-relaxed text-slate-600 lg:mx-0">
-                A community-backed platform for transparent support and impact—anchored in sincerity,
+                A community-backed platform for transparent support and impact-anchored in sincerity,
                 integrity, competence, and capacity.
               </p>
             </motion.div>
@@ -223,7 +223,7 @@ const Hero = () => {
             <div className="relative aspect-[3/4] overflow-hidden rounded-3xl border border-white/90 bg-white shadow-[0_32px_64px_-20px_rgb(9_63_133/0.35)] ring-1 ring-theme-900/5">
               <Image
                 src="/morris/m1.jpeg"
-                alt="Morris Monye — campaign portrait"
+                alt="Morris Monye - campaign portrait"
                 fill
                 priority
                 className="object-cover object-top"

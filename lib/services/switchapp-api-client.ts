@@ -63,7 +63,7 @@ export async function verifySwitchTransactionByRef(
 
   const secret = process.env.SWITCHAPP_SECRET_KEY?.trim();
   if (!secret) {
-    switchVerifyLog("Switch API: abort — SWITCHAPP_SECRET_KEY not set");
+    switchVerifyLog("Switch API: abort - SWITCHAPP_SECRET_KEY not set");
     return {
       ok: false,
       status: 500,

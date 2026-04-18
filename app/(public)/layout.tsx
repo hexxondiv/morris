@@ -14,7 +14,7 @@ interface PublicLayoutProps {
 
 export default function PublicLayout({
   children,
-  title = "Morris Monye — Aniocha North | Delta State House of Assembly",
+  title = "Morris Monye - Aniocha North | Delta State House of Assembly",
   description =
     "Morris Monye for Delta State House of Assembly (Aniocha North): community funding, transparent impact, and public leadership rooted in civic engagement.",
   keywords =

@@ -80,7 +80,7 @@ export async function getPublicLedgerData(
       type: (t.direction === TransactionDirection.CREDIT
         ? "inflow"
         : "outflow") as "inflow" | "outflow",
-      description: t.description || `${kindLabel} — ${t.project?.title ?? "General"}`,
+      description: t.description || `${kindLabel} - ${t.project?.title ?? "General"}`,
       amount: Math.abs(dec(t.amount)),
       category,
       subcategory: t.project?.title || "Platform",

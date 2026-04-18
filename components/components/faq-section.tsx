@@ -10,17 +10,17 @@ const faqs = [
   {
     question: "Who is Morris Monye?",
     answer:
-      "Morris Monye is a Delta-born entrepreneur and civic leader—founder of Mo Credits and Crisp Agro, a media executive at News Central, and a voice for youth participation in governance. He is running for the Delta State House of Assembly to represent Aniocha North.",
+      "Morris Monye is a Delta-born entrepreneur and civic leader/founder of Mo Credits and Crisp Agro, and a voice for youth participation in governance. He is running for the Delta State House of Assembly to represent Aniocha North.",
   },
-  {
-    question: "How can I learn more about your governance and legal structure?",
-    answer:
-      "You can find detailed information on our governance page or request official documents via our contact form.",
-  },
+  // {
+  //   question: "How can I learn more about your governance and legal structure?",
+  //   answer:
+  //     "You can find detailed information on our governance page or request official documents via our contact form.",
+  // },
   {
     question: "How does MORRIS MONYE ensure transparent fund and project management?",
     answer:
-      "We publish regular reports, use third-party audits, and give members access to financial breakdowns and the public ledger so money raised for Aniocha North stays traceable.",
+      "We give members access to financial breakdowns and the public ledger so money raised on this platform stays traceable.",
   },
 ];
 

@@ -183,7 +183,7 @@ export async function runTransform(opts: TransformOptions): Promise<void> {
 
   for (const [em, ids] of Array.from(emailToProfileIds.entries())) {
     if (ids.length > 1) {
-      report.ambiguity(`Multiple legacy profiles share email "${em}": ${ids.join(", ")} — requires identity-map or manual dedupe.`);
+      report.ambiguity(`Multiple legacy profiles share email "${em}": ${ids.join(", ")} - requires identity-map or manual dedupe.`);
     }
   }
 
@@ -219,7 +219,7 @@ export async function runTransform(opts: TransformOptions): Promise<void> {
     const emNorm = normalizeEmail(p.email);
     if (emittedEmails.has(emNorm)) {
       report.ambiguity(
-        `Duplicate email in legacy profiles after Clerk checks: email=${emNorm} profile_id=${p.id} — skipping duplicate user row; fix source data or use identity-map.`
+        `Duplicate email in legacy profiles after Clerk checks: email=${emNorm} profile_id=${p.id} - skipping duplicate user row; fix source data or use identity-map.`
       );
       continue;
     }
@@ -269,7 +269,7 @@ export async function runTransform(opts: TransformOptions): Promise<void> {
   for (const p of transformedProjects) {
     if (!p.creatorId) {
       report.ambiguity(
-        `Project ${p.id} (${p.slug}) references unknown creator legacy id ${p.legacyCreatorProfileId} — import will skip or fail FK unless identity-map supplies mapping.`
+        `Project ${p.id} (${p.slug}) references unknown creator legacy id ${p.legacyCreatorProfileId} - import will skip or fail FK unless identity-map supplies mapping.`
       );
     }
   }

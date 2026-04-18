@@ -78,7 +78,7 @@ const ReceiptDownloadButton: React.FC<ReceiptDownloadButtonProps> = ({
         orgName,
         orgLogo: orgLogoDataUrl,
         signatureImage: alexSignatureBase64,
-        signatureName: "Alex Onyia",
+        signatureName: "Morris Monye",
         signatureTitle: "Executive Director",
         paymentMethod: transaction.payment_method,
         orgWebsite

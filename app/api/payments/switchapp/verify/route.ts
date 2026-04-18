@@ -143,7 +143,7 @@ export async function POST(request: Request) {
     amountPaid: verify.data.amount,
     txRef,
   };
-  switchVerifyLog("route: success — response", responseBody);
+  switchVerifyLog("route: success - response", responseBody);
 
   return NextResponse.json(responseBody);
 }

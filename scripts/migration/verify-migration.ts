@@ -70,7 +70,7 @@ export async function runVerify(opts: VerifyOptions): Promise<number> {
   for (const [label, exp, act] of exportVsTransform) {
     if (exp !== act) {
       errors.push(
-        `Export vs transform row count mismatch (${label}): export=${exp} transformed=${act} — review transform ambiguities/skips.`
+        `Export vs transform row count mismatch (${label}): export=${exp} transformed=${act} - review transform ambiguities/skips.`
       );
     }
   }

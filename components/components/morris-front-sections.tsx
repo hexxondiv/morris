@@ -3,7 +3,7 @@ import Image from "next/image";
 const NUGGETS = [
   {
     title: "Sincerity",
-    body: "Straight talk with constituents—no performance, just accountable representation.",
+    body: "Straight talk with constituents-no performance, just accountable representation.",
   },
   {
     title: "Integrity",
@@ -38,7 +38,7 @@ export function MorrisNuggets() {
             Choose leadership you can trust
           </h2>
           <p className="mt-4 text-lg text-theme-700">
-            The same values on the campaign trail are the standards Morris brings to public
+            The same values on the campaign trail are the standards Morris Monye brings to public
             service.
           </p>
         </div>
@@ -88,9 +88,7 @@ export function MorrisAbout() {
                 He is the founder and CEO of{" "}
                 <strong>Mo Credits Limited</strong>, a fintech focused on microloans and
                 financial inclusion, and of <strong>Crisp Agro Limited</strong>, an agribusiness
-                centred on rice production and food security. He serves as Head of Digital
-                Marketing and Social Media at <strong>News Central</strong>, helping grow the
-                channel&apos;s audience and profile across Nigeria and the continent.
+                centred on rice production and food security.
               </p>
               <p>
                 During the 2023 elections he convened the <strong>Super Volunteers for Peter Obi</strong>

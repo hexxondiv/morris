@@ -37,7 +37,7 @@ export default function ProjectsSection() {
           </h2>
           <p className="text-xl text-stone-200 max-w-2xl mx-auto mb-8">
             Discover practical projects funded for Aniocha North, Delta
-            State—schools, livelihoods, and community assets your support can
+            State: schools, livelihoods, and community assets your support can
             move forward.
           </p>
           <Link

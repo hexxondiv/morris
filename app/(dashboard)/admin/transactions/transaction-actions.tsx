@@ -85,7 +85,7 @@ export function TransactionActions({ transaction, setData }: TransactionActionsP
         }
       } else {
         toast.info("Switch status refreshed", {
-          description: `Switch: ${payload.switchStatus ?? "unknown"} · Transaction: ${payload.transactionStatus ?? "—"}${payload.pledgeStatus ? ` · Pledge: ${payload.pledgeStatus}` : ""}`,
+          description: `Switch: ${payload.switchStatus ?? "unknown"} · Transaction: ${payload.transactionStatus ?? "-"}${payload.pledgeStatus ? ` · Pledge: ${payload.pledgeStatus}` : ""}`,
         });
         if (setData && ts) {
           setData((prev) =>
