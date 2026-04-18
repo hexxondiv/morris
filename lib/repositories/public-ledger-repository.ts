@@ -72,7 +72,18 @@ export async function getPublicLedgerData(
 
     const kindLabel = transactionKindToApi(t.kind);
     const category =
-      t.ledgerAccount?.publicName || t.ledgerAccount?.name || kindLabel;
+      t.ledgerAccount?.publicName ||
+      t.ledgerAccount?.name ||
+      (t.direction === TransactionDirection.CREDIT &&
+      (t.kind === TransactionKind.DONATION || t.kind === TransactionKind.PLEDGE)
+        ? "Donations"
+        : kindLabel);
+
+    const baseDescription =
+      t.description || `${kindLabel} - ${t.project?.title ?? "General"}`;
+    const showDonorAsTitle =
+      t.direction === TransactionDirection.CREDIT &&
+      (t.kind === TransactionKind.DONATION || t.kind === TransactionKind.PLEDGE);
 
     return {
       id: t.id,
@@ -80,12 +91,12 @@ export async function getPublicLedgerData(
       type: (t.direction === TransactionDirection.CREDIT
         ? "inflow"
         : "outflow") as "inflow" | "outflow",
-      description: t.description || `${kindLabel} - ${t.project?.title ?? "General"}`,
+      description: showDonorAsTitle ? donor : baseDescription,
       amount: Math.abs(dec(t.amount)),
       category,
       subcategory: t.project?.title || "Platform",
       reference: t.paymentReference || t.externalReference || t.id,
-      items: donor,
+      items: showDonorAsTitle ? baseDescription : donor,
       status: t.status.toLowerCase(),
       payment_method: t.paymentMethod || "unknown",
       running_balance: running,
