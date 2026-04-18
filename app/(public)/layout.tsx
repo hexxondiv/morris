@@ -23,14 +23,23 @@ export default function PublicLayout({
   ogImage = "/og.png",
   noIndex = false,
 }: PublicLayoutProps) {
+  const siteOrigin = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    "http://localhost:3000"
+  ).replace(/\/$/, "");
+  const absoluteOgImage = ogImage.startsWith("http")
+    ? ogImage
+    : `${siteOrigin}${ogImage}`;
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "MORRIS MONYE",
     "alternateName": "MORRIS MONYE",
     "description": description,
-    "url": process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
-    "logo": `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/logo.png`,
+    "url": siteOrigin,
+    "logo": `${siteOrigin}/logo.png`,
     "sameAs": [
       "https://www.instagram.com/morris_monye/",
       "https://democracybuilders.ng/team/morris-monye/"
@@ -73,7 +82,7 @@ export default function PublicLayout({
         <meta property="og:type" content="website" />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
-        <meta property="og:image" content={ogImage} />
+        <meta property="og:image" content={absoluteOgImage} />
         <meta property="og:image:alt" content="MORRIS MONYE - community funding and impact platform" />
         <meta property="og:site_name" content="MORRIS MONYE" />
         {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
@@ -82,7 +91,7 @@ export default function PublicLayout({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content={ogImage} />
+        <meta name="twitter:image" content={absoluteOgImage} />
         <meta name="twitter:image:alt" content="MORRIS MONYE - community funding and impact platform" />
         
         {/* Favicon (docs/assets/LOGOS/1.png → public) */}
