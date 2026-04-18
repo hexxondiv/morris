@@ -190,7 +190,10 @@ const TopDonorsCard: React.FC<{ topDonors: TopDonor[]; loading?: boolean }> = ({
                       )}
                     </div>
                     <div className="flex items-center space-x-2 sm:space-x-4 text-xs text-white opacity-70">
-                      <span>{donor.donation_count} donations</span>
+                      <span>
+                        {donor.donation_count}{" "}
+                        {donor.donation_count === 1 ? "donation" : "donations"}
+                      </span>
                       <span className="hidden sm:inline">•</span>
                       <span className="hidden sm:inline">
                         Since {formatDateSmart(donor.first_donation)}
@@ -248,7 +251,10 @@ const TopDonorsCard: React.FC<{ topDonors: TopDonor[]; loading?: boolean }> = ({
                       )}
                     </div>
                     <div className="flex items-center space-x-2 sm:space-x-4 text-xs text-white opacity-70">
-                      <span>{donor.donation_count} donations</span>
+                      <span>
+                        {donor.donation_count}{" "}
+                        {donor.donation_count === 1 ? "donation" : "donations"}
+                      </span>
                       <span className="hidden sm:inline">•</span>
                       <span className="hidden sm:inline">
                         Since {formatDateSmart(donor.first_donation)}
